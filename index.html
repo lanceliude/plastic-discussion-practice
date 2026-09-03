@@ -609,8 +609,8 @@ const dialogues = [
   {role:"Student A", text:"Good morning, everyone. Thank you for joining this discussion. Today, we are going to talk about plastic pollution. We will first discuss its main sources and impacts on the ecosystem and human health. Then, we will look at how individuals, technology, and policies can help reduce plastic pollution. Let’s begin with the main sources. Who would like to start?", startTime:2.83, endTime:25.93},
   {role:"Student B", text:"I will go first. From the research I have read, plastic packaging is one major source of plastic pollution. Many bottles, plastic bags and food containers are used only once and then thrown away, but the waste can remain for years.", startTime:26.01, endTime:43.8},
   {role:"Student C", text:"That is a good point. But do you think people are mainly responsible, or are companies also responsible for producing too much packaging?", startTime:43.88, endTime:52.35},
-  {role:"Student A", text:"I think both are responsible. People can choose products with less packaging, but companies make the decisions about how products are packaged. Another issue we should consider is poor waste management. Research shows that 22 million tonnes of plastic leaked into the environment in 2019, mainly because waste was not collected or managed well.", startTime:52.43, endTime:74.58},
-  {role:"Student C", text:"I agree. We should not only focus on large items like bottles and bags. Microplastics are also a source of pollution. Tyre wear, brake wear and washing synthetic clothes can release tiny plastic particles. These sources are less visible, so they are harder for people to notice.", startTime:74.66, endTime:93.86},
+  {role:"Student A", text:"I think both are responsible. People can choose products with less packaging, but companies make the decisions about how products are packaged. Another issue we should consider is poor waste management. Research shows that 22 million tonnes of plastic leaked into the environment in 2019, mainly because waste was not collected or managed well.", startTime:52.43, endTime:74.42},
+  {role:"Student C", text:"I agree. We should not only focus on large items like bottles and bags. Microplastics are also a source of pollution. Tyre wear, brake wear and washing synthetic clothes can release tiny plastic particles. These sources are less visible, so they are harder for people to notice.", startTime:74.50, endTime:93.86},
   {role:"Student B", text:"That is an important point. Plastic from these different sources can enter the environment. We should now think about what happens after it gets into the environment. So, let’s look at its ecological impacts.", startTime:93.94, endTime:106.66},
   {role:"Student A", text:"Plastic can harm marine animals because they may mistake it for food. They can also become trapped in plastic bags or fishing nets. This may stop them from feeding, moving, or escaping from danger.", startTime:106.74, endTime:119.84},
   {role:"Student B", text:"Exactly, but I think the impact is not only limited to animals. Plastic can enter soil, groundwater, rivers and oceans. When it breaks down into small pieces, it can harm food chains. Therefore, plastic pollution may affect the balance of whole ecosystems.", startTime:119.92, endTime:135.34},
@@ -621,7 +621,7 @@ const dialogues = [
   {role:"Student A", text:"This means plastic pollution is not only an environmental problem. It can also be a serious concern for people. So, the next question is: what can individuals do to reduce this problem? One thing I can think of is refusing unnecessary single-use items. For example, people can bring reusable shopping bags, coffee cups, bottles and food containers. These actions may seem small, but many people doing them often can reduce waste.", startTime:187.31, endTime:219.1},
   {role:"Student C", text:"I agree, but reusable products only work if people remember to use them. I think people should also choose products with less packaging. They can buy loose fruit and vegetables or use refill options. What do you think, Student B? Is this realistic for everyone?", startTime:219.19, endTime:236.62},
   {role:"Student B", text:"It may not be equally easy for everyone, because refill shops are not available in every area. However, people can still make some changes, such as reusing containers and following local recycling rules. What do you think?", startTime:236.7, endTime:249.5},
-  {role:"Student A", text:"I agree that individual actions are helpful. However, individuals cannot solve the whole problem alone. We still need other solutions, such as technology and innovation. For example, better recycling technology can help. Automated systems can identify and sort different plastics more accurately. This can reduce waste and improve the quality of recycled materials.", startTime:249.58, endTime:275.21},
+  {role:"Student A", text:"I agree that individual actions are helpful. However, individuals cannot solve the whole problem alone. We still need other solutions, such as technology and innovation. For example, better recycling technology can help. Automated systems can identify and sort different plastics more accurately. This can reduce waste and improve the quality of recycled materials.", startTime:249.42, endTime:275.21},
   {role:"Student C", text:"That is useful, especially because different plastic types cannot always be recycled together. Another technology is microfibre filters for washing machines. These filters capture tiny plastic fibres before they enter wastewater and waterways. I think prevention is better than trying to remove pollution after it reaches the ocean.", startTime:275.29, endTime:295.8},
   {role:"Student A", text:"I agree with that idea. Companies can also use innovation to design packaging that uses less plastic and is easier to reuse or recycle. For example, using fewer mixed materials can make recycling easier.", startTime:295.88, endTime:311.06},
   {role:"Student B", text:"These technologies can be useful, but companies may not always use them without support or clear rules. Therefore, governments also have an important role. For example, New Zealand has phased out some single-use and hard-to-recycle plastics, including plastic produce bags, plates, bowls and cutlery. I think bans are useful when a product is unnecessary and suitable alternatives are available.", startTime:311.14, endTime:333.8},
@@ -631,7 +631,7 @@ const dialogues = [
   {role:"Student C", text:"I would also like to mention international cooperation. Plastic pollution crosses national borders through rivers and oceans. Countries need to share technology, improve waste-management systems and support lower-income countries. Without cooperation, plastic from one country can still affect another country’s environment.", startTime:377.15, endTime:396.61},
   {role:"Student A", text:"To summarise what we have discussed, we have looked at the sources, harmful impacts of plastic pollution and different solutions to it. It seems that no single action can solve the problem.", startTime:396.69, endTime:408.12},
   {role:"Student C", text:"Yes, individuals can help by using fewer single-use plastics, reusing items and recycling correctly.", startTime:408.2, endTime:415.46},
-  {role:"Student B", text:"And technology, innovation and government policies are also important. Individuals, companies and governments need to work together to reduce plastic pollution and protect the environment.", startTime:415.54, endTime:426.59},
+  {role:"Student B", text:"And technology, innovation and government policies are also important. Individuals, companies and governments need to work together to reduce plastic pollution and protect the environment.", startTime:415.38, endTime:426.59},
   {role:"Student A", text:"All right, thank you, everyone, for joining our discussion. That’s very insightful.", startTime:426.67, endTime:430.99},
   {role:"Student B", text:"Thank you. See you next time!", startTime:431.07, endTime:434.25},
   {role:"Student C", text:"See you!", startTime:434.33, endTime:437.0}
@@ -645,6 +645,7 @@ const EMBEDDED_AUDIO_SRC = 'data:audio/mpeg;base64,SUQzBAAAAAABBFRYWFgAAAASAAADb
 const TOTAL = dialogues.length;
 let currentIndex = 0;
 let isPlaying = false;
+let rafId = null;
 let isMyTurn = false;
 let practiceStarted = false;
 let practiceStartTime = null;
@@ -768,6 +769,7 @@ function playSentence(index) {
   if (isMySentence(d)) {
     isMyTurn = true;
     isPlaying = false;
+    stopEndCheck();
     audio.pause();
     showMyTurnBanner();
     updatePlayButton();
@@ -779,10 +781,11 @@ function playSentence(index) {
       audio.playbackRate = playbackRate;
       const p = audio.play();
       if (p && p.then) {
-        p.then(() => { isPlaying = true; updatePlayButton(); })
+        p.then(() => { isPlaying = true; updatePlayButton(); startEndCheck(); })
          .catch(err => { console.warn('Audio play failed:', err); isPlaying = false; updatePlayButton(); });
       } else {
         isPlaying = true;
+        startEndCheck();
       }
     } catch(e) {
       console.warn('Audio error:', e);
@@ -795,18 +798,26 @@ function playSentence(index) {
 // ============================================================
 //  音频 timeupdate：到达 endTime 自动停止并前进
 // ============================================================
-audio.addEventListener('timeupdate', () => {
-  if (!isPlaying || isMyTurn) return;
-  const d = dialogues[currentIndex];
-  if (!d) return;
-  if (audio.currentTime >= d.endTime) {
-    audio.pause();
-    isPlaying = false;
-    setTimeout(() => {
-      if (!isMyTurn) playSentence(currentIndex + 1);
-    }, 200);
+// Precise end-check using requestAnimationFrame (16ms vs timeupdate 250ms)
+function startEndCheck() {
+  stopEndCheck();
+  function tick() {
+    if (!isPlaying || isMyTurn) { rafId = null; return; }
+    const d = dialogues[currentIndex];
+    if (d && audio.currentTime >= d.endTime) {
+      audio.pause();
+      isPlaying = false;
+      rafId = null;
+      setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
+      return;
+    }
+    rafId = requestAnimationFrame(tick);
   }
-});
+  rafId = requestAnimationFrame(tick);
+}
+function stopEndCheck() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
 
 audio.addEventListener('ended', () => {
   if (currentIndex >= TOTAL - 1) finishPractice();
@@ -834,6 +845,7 @@ function togglePlay() {
   if (isPlaying) {
     audio.pause();
     isPlaying = false;
+    stopEndCheck();
   } else {
     if (!practiceStarted) {
       practiceStarted = true;
@@ -848,10 +860,11 @@ function togglePlay() {
     audio.playbackRate = playbackRate;
     const p = audio.play();
     if (p && p.then) {
-      p.then(() => { isPlaying = true; updatePlayButton(); })
+      p.then(() => { isPlaying = true; updatePlayButton(); startEndCheck(); })
        .catch(err => { console.warn('Play failed:', err); isPlaying = false; updatePlayButton(); });
     } else {
       isPlaying = true;
+      startEndCheck();
     }
   }
   updatePlayButton();
