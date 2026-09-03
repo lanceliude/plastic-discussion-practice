@@ -599,7 +599,7 @@
   </div>
 </div>
 
-<audio id="audio" preload="auto" playsinline></audio>
+
 
 <script>
 // ============================================================
@@ -645,15 +645,21 @@ const EMBEDDED_AUDIO_SRC = 'data:audio/mpeg;base64,SUQzBAAAAAABBFRYWFgAAAASAAADb
 const TOTAL = dialogues.length;
 let currentIndex = 0;
 let isPlaying = false;
-let rafId = null;
 let isMyTurn = false;
 let practiceStarted = false;
 let practiceStartTime = null;
 let selectedRole = 'Student A';  // "Student A" / "Student B" / "Student C" / "ALL"
 let playbackRate = 1.0;
-let audioPath = 'EMBEDDED';
 
-const audio = document.getElementById('audio');
+// Web Audio API (sample-accurate, no MP3 seek drift)
+let audioCtx = null;
+let audioBuffer = null;
+let currentSource = null;
+let sourceStartTime = 0;
+let sourceOffset = 0;
+let pausedAt = 0;
+let audioReady = false;
+
 const transcriptEl = document.getElementById('transcript');
 const speedRange = document.getElementById('speedRange');
 const speedVal = document.getElementById('speedVal');
@@ -682,8 +688,8 @@ function loadSettings() {
     const s = localStorage.getItem('dp_speed');
     const p = localStorage.getItem('dp_audioPath');
     if (r) { selectedRole = r; }
-    if (s) { playbackRate = parseFloat(s); speedRange.value = s; speedVal.textContent = s + 'x'; audio.playbackRate = parseFloat(s); }
-    if (p && p !== 'EMBEDDED' && p.trim() !== '') { audioPath = p; document.getElementById('audioPathInput').value = p; }
+    if (s) { playbackRate = parseFloat(s); speedRange.value = s; speedVal.textContent = s + 'x'; }
+    /* audio path not used in Web Audio mode */
   } catch(e) {}
   updateRoleSegUI();
 }
@@ -757,6 +763,57 @@ function updateProgress() {
 }
 
 // ============================================================
+//  Web Audio API: sample-accurate playback (no MP3 seek drift)
+// ============================================================
+async function initAudio() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const base64 = EMBEDDED_AUDIO_SRC.split(',')[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
+    audioReady = true;
+  } catch(e) {
+    console.error('Audio decode failed:', e);
+    alert('音频加载失败，请刷新页面重试');
+  }
+}
+
+function stopCurrentSource() {
+  if (currentSource) {
+    try { currentSource.onended = null; currentSource.stop(); } catch(e) {}
+    currentSource = null;
+  }
+}
+
+function getPlaybackPosition() {
+  if (!isPlaying || !currentSource || !audioCtx) return pausedAt;
+  return sourceOffset + (audioCtx.currentTime - sourceStartTime) * playbackRate;
+}
+
+function startPlayback(offset, duration) {
+  stopCurrentSource();
+  if (!audioReady || !audioBuffer || !audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  currentSource = audioCtx.createBufferSource();
+  currentSource.buffer = audioBuffer;
+  currentSource.playbackRate.value = playbackRate;
+  currentSource.connect(audioCtx.destination);
+  sourceStartTime = audioCtx.currentTime;
+  sourceOffset = offset;
+  currentSource.onended = () => {
+    if (isPlaying) {
+      isPlaying = false;
+      currentSource = null;
+      setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
+    }
+  };
+  currentSource.start(0, offset, Math.max(0.01, duration));
+  isPlaying = true;
+}
+
+// ============================================================
 //  播放某一句
 // ============================================================
 function playSentence(index) {
@@ -769,59 +826,17 @@ function playSentence(index) {
   if (isMySentence(d)) {
     isMyTurn = true;
     isPlaying = false;
-    stopEndCheck();
-    audio.pause();
+    stopCurrentSource();
     showMyTurnBanner();
     updatePlayButton();
   } else {
     isMyTurn = false;
     hideMyTurnBanner();
-    try {
-      audio.currentTime = d.startTime;
-      audio.playbackRate = playbackRate;
-      const p = audio.play();
-      if (p && p.then) {
-        p.then(() => { isPlaying = true; updatePlayButton(); startEndCheck(); })
-         .catch(err => { console.warn('Audio play failed:', err); isPlaying = false; updatePlayButton(); });
-      } else {
-        isPlaying = true;
-        startEndCheck();
-      }
-    } catch(e) {
-      console.warn('Audio error:', e);
-      isPlaying = false;
-    }
+    pausedAt = d.startTime;
+    startPlayback(d.startTime, d.endTime - d.startTime);
     updatePlayButton();
   }
 }
-
-// ============================================================
-//  音频 timeupdate：到达 endTime 自动停止并前进
-// ============================================================
-// Precise end-check using requestAnimationFrame (16ms vs timeupdate 250ms)
-function startEndCheck() {
-  stopEndCheck();
-  function tick() {
-    if (!isPlaying || isMyTurn) { rafId = null; return; }
-    const d = dialogues[currentIndex];
-    if (d && audio.currentTime >= d.endTime) {
-      audio.pause();
-      isPlaying = false;
-      rafId = null;
-      setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
-      return;
-    }
-    rafId = requestAnimationFrame(tick);
-  }
-  rafId = requestAnimationFrame(tick);
-}
-function stopEndCheck() {
-  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-}
-
-audio.addEventListener('ended', () => {
-  if (currentIndex >= TOTAL - 1) finishPractice();
-});
 
 // ============================================================
 //  我的回合 Banner
@@ -840,12 +855,11 @@ function hideMyTurnBanner() {
 //  播放/暂停
 // ============================================================
 function togglePlay() {
-  // My turn: button acts as "读完了"
   if (isMyTurn) { myTurnDone(); return; }
   if (isPlaying) {
-    audio.pause();
+    pausedAt = getPlaybackPosition();
+    stopCurrentSource();
     isPlaying = false;
-    stopEndCheck();
   } else {
     if (!practiceStarted) {
       practiceStarted = true;
@@ -854,18 +868,8 @@ function togglePlay() {
     if (currentIndex >= TOTAL) { restartPractice(); return; }
     const d = dialogues[currentIndex];
     if (isMySentence(d)) { playSentence(currentIndex); return; }
-    if (audio.currentTime < d.startTime || audio.currentTime >= d.endTime) {
-      audio.currentTime = d.startTime;
-    }
-    audio.playbackRate = playbackRate;
-    const p = audio.play();
-    if (p && p.then) {
-      p.then(() => { isPlaying = true; updatePlayButton(); startEndCheck(); })
-       .catch(err => { console.warn('Play failed:', err); isPlaying = false; updatePlayButton(); });
-    } else {
-      isPlaying = true;
-      startEndCheck();
-    }
+    if (pausedAt < d.startTime || pausedAt >= d.endTime) pausedAt = d.startTime;
+    startPlayback(pausedAt, d.endTime - pausedAt);
   }
   updatePlayButton();
 }
@@ -895,7 +899,7 @@ function updatePlayButton() {
 
 function goPrev() {
   if (currentIndex > 0) {
-    audio.pause();
+    stopCurrentSource();
     isPlaying = false;
     isMyTurn = false;
     hideMyTurnBanner();
@@ -903,7 +907,7 @@ function goPrev() {
   }
 }
 function goNext() {
-  audio.pause();
+  stopCurrentSource();
   isPlaying = false;
   isMyTurn = false;
   hideMyTurnBanner();
@@ -922,7 +926,7 @@ function myTurnDone() {
 //  结束练习
 // ============================================================
 function finishPractice() {
-  audio.pause();
+  stopCurrentSource();
   isPlaying = false;
   isMyTurn = false;
   hideMyTurnBanner();
@@ -956,8 +960,8 @@ function restartPractice() {
   practiceStartTime = null;
   statsModal.classList.remove('show');
   hideMyTurnBanner();
-  audio.pause();
-  audio.currentTime = 0;
+  stopCurrentSource();
+  pausedAt = 0;
   renderTranscript();
   updateProgress();
   updatePlayButton();
@@ -977,7 +981,7 @@ transcriptEl.addEventListener('click', (e) => {
   if (!sentenceEl) return;
   const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
   if (idx === -1 || idx >= TOTAL) return;
-  audio.pause();
+  stopCurrentSource();
   isPlaying = false;
   isMyTurn = false;
   hideMyTurnBanner();
@@ -991,7 +995,7 @@ transcriptEl.addEventListener('click', (e) => {
 speedRange.addEventListener('input', (e) => {
   playbackRate = parseFloat(e.target.value);
   speedVal.textContent = playbackRate.toFixed(1) + 'x';
-  audio.playbackRate = playbackRate;
+  if (currentSource) currentSource.playbackRate.value = playbackRate;
   saveSpeed(playbackRate.toFixed(1));
 });
 
@@ -1005,9 +1009,6 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('settingsBtn').addEventListener('click', () => settingsModal.classList.add('show'));
 document.getElementById('settingsCancel').addEventListener('click', () => settingsModal.classList.remove('show'));
 document.getElementById('settingsSave').addEventListener('click', () => {
-  const newPath = document.getElementById('audioPathInput').value.trim();
-  if (newPath) { audioPath = newPath; audio.src = audioPath; saveAudioPath(newPath); }
-  else { audioPath = 'EMBEDDED'; audio.src = EMBEDDED_AUDIO_SRC; saveAudioPath('EMBEDDED'); }
   settingsModal.classList.remove('show');
 });
 settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('show'); });
@@ -1027,8 +1028,7 @@ document.getElementById('guideBtn').addEventListener('click', () => {
 //  初始化
 // ============================================================
 loadSettings();
-if (audioPath === 'EMBEDDED') { audio.src = EMBEDDED_AUDIO_SRC; }
-else { audio.src = audioPath; }
+initAudio();
 renderTranscript();
 updateProgress();
 updatePlayButton();
