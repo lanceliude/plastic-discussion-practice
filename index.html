@@ -765,19 +765,34 @@ function updateProgress() {
 // ============================================================
 //  Web Audio API: sample-accurate playback (no MP3 seek drift)
 // ============================================================
+let gainNode = null;
+
 async function initAudio() {
   try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Decode audio with a temp context (don't keep it — iOS requires
+    // the real AudioContext to be created inside a user gesture)
+    const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
     const base64 = EMBEDDED_AUDIO_SRC.split(',')[1];
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
+    audioBuffer = await tempCtx.decodeAudioData(bytes.buffer);
+    tempCtx.close();
     audioReady = true;
   } catch(e) {
     console.error('Audio decode failed:', e);
     alert('音频加载失败，请刷新页面重试');
   }
+}
+
+function ensureAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = 1.0;
+    gainNode.connect(audioCtx.destination);
+  }
+  return audioCtx;
 }
 
 function stopCurrentSource() {
@@ -794,13 +809,15 @@ function getPlaybackPosition() {
 
 function startPlayback(offset, duration) {
   stopCurrentSource();
-  if (!audioReady || !audioBuffer || !audioCtx) return;
+  if (!audioReady || !audioBuffer) return;
+
+  ensureAudioContext();
 
   const doStart = () => {
     currentSource = audioCtx.createBufferSource();
     currentSource.buffer = audioBuffer;
     currentSource.playbackRate.value = playbackRate;
-    currentSource.connect(audioCtx.destination);
+    currentSource.connect(gainNode);
     sourceStartTime = audioCtx.currentTime;
     sourceOffset = offset;
     currentSource.onended = () => {
