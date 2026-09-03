@@ -795,22 +795,31 @@ function getPlaybackPosition() {
 function startPlayback(offset, duration) {
   stopCurrentSource();
   if (!audioReady || !audioBuffer || !audioCtx) return;
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  currentSource = audioCtx.createBufferSource();
-  currentSource.buffer = audioBuffer;
-  currentSource.playbackRate.value = playbackRate;
-  currentSource.connect(audioCtx.destination);
-  sourceStartTime = audioCtx.currentTime;
-  sourceOffset = offset;
-  currentSource.onended = () => {
-    if (isPlaying) {
-      isPlaying = false;
-      currentSource = null;
-      setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
-    }
+
+  const doStart = () => {
+    currentSource = audioCtx.createBufferSource();
+    currentSource.buffer = audioBuffer;
+    currentSource.playbackRate.value = playbackRate;
+    currentSource.connect(audioCtx.destination);
+    sourceStartTime = audioCtx.currentTime;
+    sourceOffset = offset;
+    currentSource.onended = () => {
+      if (isPlaying) {
+        isPlaying = false;
+        currentSource = null;
+        setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
+      }
+    };
+    currentSource.start(0, offset, Math.max(0.01, duration));
+    isPlaying = true;
+    updatePlayButton();
   };
-  currentSource.start(0, offset, Math.max(0.01, duration));
-  isPlaying = true;
+
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(doStart).catch(() => doStart());
+  } else {
+    doStart();
+  }
 }
 
 // ============================================================
