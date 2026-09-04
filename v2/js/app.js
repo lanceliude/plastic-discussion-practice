@@ -6,8 +6,10 @@ let isMyTurn = false;
 let practiceStarted = false;
 let practiceStartTime = null;
 let selectedRole = 'Student A';
+let practiceMode = 'read';  // 'read' or 'recite'
 let playbackRate = 1.0;
 let showTranslation = false;
+let isHintPressed = false;
 
 // DOM elements
 const transcriptEl = document.getElementById('transcript');
@@ -19,11 +21,12 @@ const progressFill = document.getElementById('progressFill');
 const playBtn = document.getElementById('playBtn');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
-const settingsModal = document.getElementById('settingsModal');
 const statsModal = document.getElementById('statsModal');
 const guidePanel = document.getElementById('guidePanel');
 const roleSeg = document.getElementById('roleSeg');
+const modeSeg = document.getElementById('modeSeg');
 const myTurnBar = document.getElementById('myTurnBar');
+const myTurnText = document.getElementById('myTurnText');
 const translateBtn = document.getElementById('translateBtn');
 const speechToggleBtn = document.getElementById('speechToggleBtn');
 
@@ -38,17 +41,21 @@ function loadSettings() {
     const s = localStorage.getItem('dp_speed');
     const t = localStorage.getItem('dp_translation');
     const sp = localStorage.getItem('dp_speech');
-    if (r) { selectedRole = r; }
+    const m = localStorage.getItem('dp_mode');
+    if (r) selectedRole = r;
     if (s) { playbackRate = parseFloat(s); speedRange.value = s; speedVal.textContent = s + 'x'; }
+    if (m) practiceMode = m;
     if (t === 'true') { showTranslation = true; document.body.classList.add('show-zh'); translateBtn.classList.add('active'); }
     else { showTranslation = false; document.body.classList.remove('show-zh'); translateBtn.classList.remove('active'); }
     if (sp === 'false') { speechEnabled = false; speechToggleBtn.classList.remove('active'); }
     else { speechEnabled = true; speechToggleBtn.classList.add('active'); }
   } catch(e) {}
   updateRoleSegUI();
+  updateModeSegUI();
 }
 function saveRole(v) { try { localStorage.setItem('dp_role', v); } catch(e) {} }
 function saveSpeed(v) { try { localStorage.setItem('dp_speed', v); } catch(e) {} }
+function saveMode(v) { try { localStorage.setItem('dp_mode', v); } catch(e) {} }
 
 // Role segmented control
 function updateRoleSegUI() {
@@ -75,6 +82,33 @@ roleSeg.addEventListener('click', (e) => {
   }
 });
 
+// Practice mode (read/recite)
+function updateModeSegUI() {
+  const btns = modeSeg.querySelectorAll('.mode-btn');
+  btns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === practiceMode);
+  });
+}
+
+modeSeg.addEventListener('click', (e) => {
+  const btn = e.target.closest('.mode-btn');
+  if (!btn) return;
+  practiceMode = btn.dataset.mode;
+  saveMode(practiceMode);
+  updateModeSegUI();
+  // If currently in my turn, re-render to switch between full text and blanks
+  if (isMyTurn && dialogues[currentIndex]) {
+    if (practiceMode === 'recite' && speechSupported && speechEnabled) {
+      stopSpeechRecognition();
+      startSpeechRecognition(dialogues[currentIndex].text, onAllWordsMatched);
+    } else {
+      stopSpeechRecognition();
+      renderTranscript();
+    }
+  }
+  updatePlayButton();
+});
+
 // Translation toggle
 translateBtn.addEventListener('click', () => {
   showTranslation = !showTranslation;
@@ -93,6 +127,9 @@ speechToggleBtn.addEventListener('click', () => {
   speechToggleBtn.classList.toggle('active', speechEnabled);
   try { localStorage.setItem('dp_speech', speechEnabled); } catch(e) {}
   if (!speechEnabled) stopSpeechRecognition();
+  else if (isMyTurn && practiceMode === 'recite' && dialogues[currentIndex]) {
+    startSpeechRecognition(dialogues[currentIndex].text, onAllWordsMatched);
+  }
 });
 
 // Render transcript
@@ -108,16 +145,30 @@ function renderTranscript() {
     }
     const roleShort = d.role.replace('Student ', '');
     const mine = isMySentence(d);
+    
+    // In recite mode + my turn + current sentence, show blanks (handled by speech.js)
+    let textContent = d.text;
+    if (i === currentIndex && isMySentence(d) && practiceMode === 'recite' && speechSupported && speechEnabled && isMyTurn) {
+      // Will be replaced by speech.js renderSentenceBlanks
+      textContent = d.text;
+    }
+    
     div.innerHTML = `
       <div class="sentence-meta">
         <span class="role-tag role-${roleShort}">${d.role}${mine ? '<span class="my-badge">你</span>' : ''}</span>
         <span class="sentence-num">${i+1}/${TOTAL}</span>
       </div>
-      <div class="sentence-text">${d.text}</div>
+      <div class="sentence-text">${textContent}</div>
       <div class="sentence-zh">${d.zh}</div>
     `;
     transcriptEl.appendChild(div);
   });
+  
+  // If in recite mode and current is my turn, render blanks
+  if (isMyTurn && practiceMode === 'recite' && speechSupported && speechEnabled && currentSentenceWords.length > 0) {
+    renderSentenceBlanks();
+  }
+  
   const currentEl = transcriptEl.querySelector('.sentence.current');
   if (currentEl) {
     setTimeout(() => currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
@@ -129,6 +180,13 @@ function updateProgress() {
   progressText.textContent = `第 ${Math.min(currentIndex+1, TOTAL)} / ${TOTAL} 句`;
   progressPercent.textContent = pct + '%';
   progressFill.style.width = pct + '%';
+}
+
+// Callback when all words matched in recite mode
+function onAllWordsMatched() {
+  if (isMyTurn) {
+    myTurnDone();
+  }
 }
 
 // Play a sentence
@@ -145,9 +203,9 @@ function playSentence(index) {
     stopCurrentSource();
     showMyTurnBanner();
     updatePlayButton();
-    // Start speech recognition for user's sentence
-    if (speechSupported && speechEnabled) {
-      setTimeout(() => startSpeechRecognition(d.text), 300);
+    
+    if (practiceMode === 'recite' && speechSupported && speechEnabled) {
+      setTimeout(() => startSpeechRecognition(d.text, onAllWordsMatched), 300);
     }
   } else {
     isMyTurn = false;
@@ -159,9 +217,9 @@ function playSentence(index) {
   }
 }
 
-// My turn banner
 function showMyTurnBanner() {
   myTurnBar.classList.add('show');
+  myTurnText.textContent = practiceMode === 'recite' ? '🔴 轮到你了 — 请背诵上方台词' : '🔴 轮到你了 — 请朗读上方台词';
   updatePlayButton();
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 }
@@ -170,9 +228,15 @@ function hideMyTurnBanner() {
   updatePlayButton();
 }
 
-// Toggle play/pause
 function togglePlay() {
-  if (isMyTurn) { myTurnDone(); return; }
+  if (isMyTurn) {
+    if (practiceMode === 'recite') {
+      // Hint button behavior: press and hold handled by touch/mouse events
+      return;
+    }
+    myTurnDone();
+    return;
+  }
   if (isPlaying) {
     pausedAt = getPlaybackPosition();
     stopCurrentSource();
@@ -196,8 +260,13 @@ function updatePlayButton() {
   const label = playBtn.querySelector('span:last-child');
   playBtn.classList.remove('my-turn-mode');
   if (isMyTurn) {
-    icon.textContent = '✅';
-    label.textContent = '读完了';
+    if (practiceMode === 'recite') {
+      icon.textContent = '💡';
+      label.textContent = '提示(按住)';
+    } else {
+      icon.textContent = '✅';
+      label.textContent = '读完了';
+    }
     playBtn.classList.add('my-turn-mode');
   } else if (isPlaying) {
     icon.textContent = '⏸';
@@ -213,6 +282,38 @@ function updatePlayButton() {
     label.textContent = '继续';
   }
 }
+
+// Hint button: press and hold to show full text in recite mode
+function hintPressStart(e) {
+  e.preventDefault();
+  if (isMyTurn && practiceMode === 'recite' && currentSentenceWords.length > 0) {
+    isHintPressed = true;
+    showFullSentence();
+  }
+}
+function hintPressEnd(e) {
+  if (isHintPressed) {
+    isHintPressed = false;
+    restoreSentenceBlanks();
+  }
+}
+
+playBtn.addEventListener('touchstart', hintPressStart, { passive: false });
+playBtn.addEventListener('touchend', hintPressEnd);
+playBtn.addEventListener('touchcancel', hintPressEnd);
+playBtn.addEventListener('mousedown', hintPressStart);
+playBtn.addEventListener('mouseup', hintPressEnd);
+playBtn.addEventListener('mouseleave', hintPressEnd);
+
+// But also allow click for read mode (读完了)
+playBtn.addEventListener('click', (e) => {
+  if (isMyTurn && practiceMode === 'recite') {
+    // In recite mode, click does nothing (hold for hint)
+    e.preventDefault();
+    return;
+  }
+  togglePlay();
+});
 
 function goPrev() {
   if (currentIndex > 0) {
@@ -235,8 +336,7 @@ function goNext() {
 }
 
 function myTurnDone() {
-  // Mark missed words
-  if (isMyTurn && currentSentenceWords.length > 0) {
+  if (isMyTurn && practiceMode === 'recite' && currentSentenceWords.length > 0) {
     finalizeSentenceBlanks();
   }
   stopSpeechRecognition();
@@ -246,7 +346,6 @@ function myTurnDone() {
   else playSentence(currentIndex + 1);
 }
 
-// Finish practice
 function finishPractice() {
   stopCurrentSource();
   stopSpeechRecognition();
@@ -262,14 +361,15 @@ function finishPractice() {
   const secs = elapsed % 60;
   const mineCount = selectedRole === 'ALL' ? 0 : dialogues.filter(d => d.role === selectedRole).length;
   const roleLabel = selectedRole === 'ALL' ? '通读' : selectedRole.replace('Student ', '');
+  const modeLabel = practiceMode === 'recite' ? '背诵' : '朗读';
 
   document.getElementById('statTotal').textContent = TOTAL;
   document.getElementById('statMine').textContent = selectedRole === 'ALL' ? '—' : mineCount;
   document.getElementById('statTime').textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
   document.getElementById('statRole').textContent = roleLabel;
   document.getElementById('statsNote').textContent = selectedRole === 'ALL'
-    ? '通读模式：全程自动播放，共 ' + TOTAL + ' 句。'
-    : `你扮演了 ${selectedRole}，共 ${mineCount} 句台词。继续加油！`;
+    ? `通读模式：全程自动播放，共 ${TOTAL} 句。`
+    : `你扮演了 ${selectedRole}（${modeLabel}模式），共 ${mineCount} 句台词。继续加油！`;
 
   statsModal.classList.add('show');
   if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
@@ -321,21 +421,14 @@ speedRange.addEventListener('input', (e) => {
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.code === 'Space') { e.preventDefault(); if (isMyTurn) myTurnDone(); else togglePlay(); }
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (isMyTurn && practiceMode === 'read') myTurnDone();
+    else if (!isMyTurn) togglePlay();
+  }
   else if (e.code === 'ArrowLeft') { e.preventDefault(); goPrev(); }
   else if (e.code === 'ArrowRight') { e.preventDefault(); if (isMyTurn) myTurnDone(); else goNext(); }
 });
-
-// Settings modal
-document.getElementById('settingsBtn').addEventListener('click', () => settingsModal.classList.add('show'));
-document.getElementById('settingsCancel').addEventListener('click', () => settingsModal.classList.remove('show'));
-document.getElementById('settingsSave').addEventListener('click', () => settingsModal.classList.remove('show'));
-settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('show'); });
-
-// Stats modal
-document.getElementById('statsClose').addEventListener('click', () => statsModal.classList.remove('show'));
-document.getElementById('statsRestart').addEventListener('click', restartPractice);
-statsModal.addEventListener('click', (e) => { if (e.target === statsModal) statsModal.classList.remove('show'); });
 
 // Guide panel
 const guideCloseBtn = document.getElementById('guideClose');
@@ -348,8 +441,10 @@ document.getElementById('guideBtn').addEventListener('click', () => {
 });
 
 // Button events
-playBtn.addEventListener('click', togglePlay);
 prevBtn.addEventListener('click', goPrev);
 nextBtn.addEventListener('click', goNext);
 
-// Init called from index.html window.onload to ensure all scripts loaded
+// Stats modal
+document.getElementById('statsClose').addEventListener('click', () => statsModal.classList.remove('show'));
+document.getElementById('statsRestart').addEventListener('click', restartPractice);
+statsModal.addEventListener('click', (e) => { if (e.target === statsModal) statsModal.classList.remove('show'); });

@@ -55,6 +55,29 @@ body {
 .seg-btn.active-C { border-color: #f39c12; background: #fef5e7; color: #d68910; }
 .seg-btn.active-ALL { border-color: #27ae60; background: #e8f8f0; color: #1e8449; }
 
+/* Practice mode (read/recite) */
+.mode-seg { display: flex; gap: 8px; margin-bottom: 14px; }
+.mode-btn {
+  flex: 1; padding: 12px 8px; border: 2px solid #ddd; background: white;
+  border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; color: #888;
+}
+.mode-btn.active {
+  border-color: #1a7a5c; background: linear-gradient(135deg, #1a7a5c, #2d9a74);
+  color: white; box-shadow: 0 2px 8px rgba(26,122,92,0.3);
+}
+
+/* Toggle buttons (translation / speech) */
+.toggle-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.toggle-btn {
+  flex: 1; padding: 10px 8px; border: 2px solid #ddd; background: white;
+  border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; color: #888;
+}
+.toggle-btn.active {
+  border-color: #ff9500; background: #fff8f0; color: #e67e00;
+}
+
 /* Speed control */
 .speed-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .speed-row input[type=range] { flex: 1; accent-color: #1a7a5c; }

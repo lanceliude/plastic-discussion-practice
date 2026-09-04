@@ -1,11 +1,13 @@
 // Speech Recognition + incremental word reveal (Duolingo-style)
 let recognition = null;
 let speechSupported = false;
-let speechEnabled = true;  // can be toggled off
+let speechEnabled = true;
 let isListening = false;
-let matchedWordCount = 0;  // how many words of current sentence have been matched
-let currentSentenceWords = [];  // words of current user sentence
-let finalTranscript = '';  // accumulated stable transcript
+let matchedWordCount = 0;
+let currentSentenceWords = [];
+let finalTranscript = '';
+let onAllMatched = null;  // callback when all words matched
+let autoContinueTimer = null;
 
 // Detect support
 (function initSpeechDetection() {
@@ -19,6 +21,32 @@ let finalTranscript = '';  // accumulated stable transcript
     recognition.maxAlternatives = 1;
   }
 })();
+
+// Mic on-demand: stop when page hidden, restart when visible and still my turn
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Page hidden (switched to another app) - stop mic immediately
+    if (isListening && recognition) {
+      try { recognition.stop(); } catch(e) {}
+      isListening = false;
+      updateSpeechStatus(false);
+    }
+  } else {
+    // Page visible again - restart mic if still in recite mode my turn
+    if (isMyTurn && practiceMode === 'recite' && speechEnabled && speechSupported) {
+      setTimeout(() => {
+        if (isMyTurn && !isListening) {
+          try { recognition.start(); isListening = true; updateSpeechStatus(true); } catch(e) {}
+        }
+      }, 300);
+    }
+  }
+});
+
+// Also stop on page unload
+window.addEventListener('pagehide', () => {
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+});
 
 // Levenshtein edit distance
 function editDistance(a, b) {
@@ -35,7 +63,6 @@ function editDistance(a, b) {
   return dp[m][n];
 }
 
-// Fuzzy match: similarity > threshold counts as match
 function wordsMatch(word1, word2, threshold = 0.65) {
   const w1 = word1.toLowerCase().replace(/[^a-z]/g, '');
   const w2 = word2.toLowerCase().replace(/[^a-z]/g, '');
@@ -46,19 +73,16 @@ function wordsMatch(word1, word2, threshold = 0.65) {
   return (1 - dist / maxLen) >= threshold;
 }
 
-// Start speech recognition for a user sentence
-function startSpeechRecognition(sentenceText) {
+function startSpeechRecognition(sentenceText, allMatchedCallback) {
   if (!speechSupported || !speechEnabled) return;
   
-  // Reset for new sentence
   matchedWordCount = 0;
   finalTranscript = '';
   currentSentenceWords = sentenceText.split(/\s+/).filter(w => w.length > 0);
+  onAllMatched = allMatchedCallback;
   
-  // Render blanks
   renderSentenceBlanks();
   
-  // Start recognition
   try {
     recognition.start();
     isListening = true;
@@ -67,7 +91,6 @@ function startSpeechRecognition(sentenceText) {
     console.warn('Recognition start failed:', e);
   }
   
-  // Handle results
   recognition.onresult = (event) => {
     let interim = '';
     let final = '';
@@ -84,9 +107,9 @@ function startSpeechRecognition(sentenceText) {
     matchWords(combined);
   };
   
-  // Auto-restart on iOS (60s limit)
+  // Auto-restart ONLY if page is visible and still my turn
   recognition.onend = () => {
-    if (isMyTurn && speechEnabled) {
+    if (isMyTurn && practiceMode === 'recite' && speechEnabled && !document.hidden) {
       try { recognition.start(); } catch(e) {}
     } else {
       isListening = false;
@@ -98,35 +121,34 @@ function startSpeechRecognition(sentenceText) {
     console.warn('Speech recognition error:', event.error);
     if (event.error === 'not-allowed') {
       speechEnabled = false;
-      alert('麦克风权限被拒绝，语音识别已关闭。可在设置中重新开启。');
+      alert('麦克风权限被拒绝，语音识别已关闭。可在显示选项中重新开启。');
     }
   };
 }
 
-// Stop speech recognition
 function stopSpeechRecognition() {
+  if (autoContinueTimer) {
+    clearTimeout(autoContinueTimer);
+    autoContinueTimer = null;
+  }
   if (recognition && isListening) {
     isListening = false;
-    try { recognition.stop(); } catch(e) {}
+    try { recognition.onend = null; recognition.stop(); } catch(e) {}
     updateSpeechStatus(false);
   }
 }
 
-// Incremental word matching
 function matchWords(transcript) {
   if (!currentSentenceWords.length) return;
   
   const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
   if (!spokenWords.length) return;
   
-  // Try to match more words from where we left off
-  // Use a sliding window: check if next script word appears in recent spoken words
   let newMatches = 0;
-  const lookahead = 5;  // look at last N spoken words for match
+  const lookahead = 5;
   
   while (matchedWordCount < currentSentenceWords.length) {
     const targetWord = currentSentenceWords[matchedWordCount];
-    // Check recent spoken words for a match
     const startIdx = Math.max(0, spokenWords.length - lookahead - newMatches);
     let found = false;
     for (let i = startIdx; i < spokenWords.length; i++) {
@@ -146,9 +168,20 @@ function matchWords(transcript) {
   if (newMatches > 0) {
     renderSentenceBlanks();
   }
+  
+  // All words matched - auto continue after delay
+  if (matchedWordCount >= currentSentenceWords.length && onAllMatched && !autoContinueTimer) {
+    autoContinueTimer = setTimeout(() => {
+      autoContinueTimer = null;
+      if (onAllMatched) {
+        const cb = onAllMatched;
+        onAllMatched = null;
+        cb();
+      }
+    }, 800);
+  }
 }
 
-// Render sentence with blanks for unmatched words
 function renderSentenceBlanks() {
   const currentEl = document.querySelector('.sentence.current .sentence-text');
   if (!currentEl) return;
@@ -165,7 +198,16 @@ function renderSentenceBlanks() {
   currentEl.innerHTML = html;
 }
 
-// When user finishes their turn, mark unmatched words
+function showFullSentence() {
+  const currentEl = document.querySelector('.sentence.current .sentence-text');
+  if (!currentEl || !currentSentenceWords.length) return;
+  currentEl.innerHTML = currentSentenceWords.join(' ');
+}
+
+function restoreSentenceBlanks() {
+  renderSentenceBlanks();
+}
+
 function finalizeSentenceBlanks() {
   const currentEl = document.querySelector('.sentence.current .sentence-text');
   if (!currentEl || !currentSentenceWords.length) return;
