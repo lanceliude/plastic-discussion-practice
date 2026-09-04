@@ -659,6 +659,18 @@ let sourceStartTime = 0;
 let sourceOffset = 0;
 let pausedAt = 0;
 let audioReady = false;
+let silentAudio = null;
+let iosSessionUnlocked = false;
+
+function unlockIOSAudioSession() {
+  if (iosSessionUnlocked) return;
+  if (!silentAudio) {
+    silentAudio = document.getElementById('silentAudio');
+    silentAudio.src = SILENT_AUDIO_SRC;
+    silentAudio.volume = 0.0001;
+  }
+  silentAudio.play().then(() => { iosSessionUnlocked = true; }).catch(() => {});
+}
 
 const transcriptEl = document.getElementById('transcript');
 const speedRange = document.getElementById('speedRange');
@@ -797,6 +809,7 @@ function getPlaybackPosition() {
 
 function startPlayback(offset, duration) {
   stopCurrentSource();
+  unlockIOSAudioSession();
   if (!audioReady || !audioBuffer) return;
 
   // Create AudioContext inside user gesture (iOS requirement)
