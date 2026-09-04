@@ -352,9 +352,4 @@ playBtn.addEventListener('click', togglePlay);
 prevBtn.addEventListener('click', goPrev);
 nextBtn.addEventListener('click', goNext);
 
-// Initialize
-loadSettings();
-initAudio('audio/full_discussion.mp3');
-renderTranscript();
-updateProgress();
-updatePlayButton();
+// Init called from index.html window.onload to ensure all scripts loaded
