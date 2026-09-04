@@ -11,6 +11,7 @@ let currentSentenceWords = [];
 let finalTranscript = '';
 let onAllMatched = null;
 let autoContinueTimer = null;
+let lastMatchedSpokenIdx = -1;  // ensures sequential matching, no look-ahead leaks
 
 // Detect support
 (function initSpeechDetection() {
@@ -128,6 +129,7 @@ function startSpeechRecognition(sentenceText, allMatchedCallback) {
   currentSentenceWords = sentenceText.split(/\s+/).filter(w => w.length > 0);
   onAllMatched = allMatchedCallback;
   ignoreResults = false;
+  lastMatchedSpokenIdx = -1;
   
   renderSentenceBlanks();
   
@@ -177,21 +179,38 @@ function matchWords(transcript) {
   if (!spokenWords.length) return;
   
   let newMatches = 0;
-  const lookahead = 5;
+  const searchWindow = 3;  // only look ahead 3 words from last match position
   
   while (matchedWordCount < currentSentenceWords.length) {
     const targetWord = currentSentenceWords[matchedWordCount];
-    const startIdx = Math.max(0, spokenWords.length - lookahead - newMatches);
+    // Start searching from after the last matched position (strictly sequential)
+    const startIdx = Math.max(0, lastMatchedSpokenIdx + 1);
+    const endIdx = Math.min(spokenWords.length, startIdx + searchWindow);
     let found = false;
-    for (let i = startIdx; i < spokenWords.length; i++) {
+    let foundIdx = -1;
+    
+    for (let i = startIdx; i < endIdx; i++) {
+      // 1. Single word match
       if (wordsMatch(targetWord, spokenWords[i])) {
         found = true;
+        foundIdx = i;
         break;
       }
+      // 2. Compound word match: merge current + next word (e.g. "ground water" -> "groundwater")
+      if (i + 1 < spokenWords.length) {
+        const compound = spokenWords[i] + spokenWords[i+1];
+        if (wordsMatch(targetWord, compound)) {
+          found = true;
+          foundIdx = i + 1;  // consume both words
+          break;
+        }
+      }
     }
+    
     if (found) {
       matchedWordCount++;
       newMatches++;
+      lastMatchedSpokenIdx = foundIdx;
     } else {
       break;
     }
