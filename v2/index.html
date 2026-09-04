@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>小组讨论陪练 - Plastic Pollution</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Header (sticky top, like Excel freeze) -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-title">🗣️ 小组讨论陪练</div>
+    <div class="header-icons">
+      <button class="icon-btn" id="guideBtn" title="使用说明">❓</button>
+      <button class="icon-btn active" id="translateBtn" title="中文翻译">🌐</button>
+      <button class="icon-btn active" id="speechToggleBtn" title="语音识别">🎤</button>
+      <button class="icon-btn" id="settingsBtn" title="设置">⚙️</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-info">
+    <span id="progressText">第 1 / 29 句</span>
+    <span id="progressPercent">0%</span>
+  </div>
+</div>
+
+<!-- Guide panel -->
+<div class="guide-panel" id="guidePanel">
+  <button class="guide-close" id="guideClose">✕</button>
+  <h3>📖 使用说明</h3>
+  <ol>
+    <li><b>选角色</b>：下方选 A / B / C 扮演，或选「通读」全程自动播放。</li>
+    <li><b>开始</b>：点底部 ▶ 开始，轮到你时底部红条闪烁，读完点橙色「读完了」。</li>
+    <li><b>语音识别</b>：你的台词会显示横线，读对的词会逐个亮出来（🎤可开关）。</li>
+    <li><b>操作</b>：点任意台词可跳转；空格=播放/暂停，←→=上一句/下一句。</li>
+  </ol>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="control-label">选择模式</div>
+  <div class="role-seg" id="roleSeg">
+    <button class="seg-btn" data-role="Student A"><span class="dot" style="background:#e74c3c"></span>A</button>
+    <button class="seg-btn" data-role="Student B"><span class="dot" style="background:#3498db"></span>B</button>
+    <button class="seg-btn" data-role="Student C"><span class="dot" style="background:#f39c12"></span>C</button>
+    <button class="seg-btn" data-role="ALL">通读</button>
+  </div>
+  <div class="control-label">播放速度</div>
+  <div class="speed-row">
+    <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1" value="1.0">
+    <span class="speed-val" id="speedVal">1.0x</span>
+  </div>
+</div>
+
+<!-- Transcript -->
+<div class="transcript" id="transcript"></div>
+
+<!-- Bottom dock -->
+<div class="dock">
+  <div class="my-turn-bar" id="myTurnBar">
+    🔴 轮到你了 — 请朗读上方台词
+    <span class="speech-status" id="speechStatus" style="margin-left:8px"><span class="speech-dot"></span>识别中</span>
+  </div>
+  <div class="dock-buttons">
+    <button class="dock-btn btn-secondary" id="prevBtn">
+      <span class="btn-icon">⏮</span><span>上一句</span>
+    </button>
+    <button class="dock-btn btn-primary" id="playBtn">
+      <span class="btn-icon">▶</span><span>开始练习</span>
+    </button>
+    <button class="dock-btn btn-secondary" id="nextBtn">
+      <span class="btn-icon">⏭</span><span>下一句</span>
+    </button>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal" id="settingsModal">
+  <div class="modal-content">
+    <h2>⚙️ 设置</h2>
+    <label>音频文件路径</label>
+    <input type="text" id="audioPathInput" value="audio/full_discussion.mp3" placeholder="audio/full_discussion.mp3">
+    <div class="modal-actions">
+      <button class="btn-cancel" id="settingsCancel">取消</button>
+      <button class="btn-save" id="settingsSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats modal -->
+<div class="modal" id="statsModal">
+  <div class="modal-content">
+    <h2>🎉 练习完成！</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="statTotal">29</div><div class="stat-label">总句数</div></div>
+      <div class="stat-card"><div class="stat-num" id="statMine">0</div><div class="stat-label">本人台词</div></div>
+      <div class="stat-card"><div class="stat-num" id="statTime">0:00</div><div class="stat-label">练习耗时</div></div>
+      <div class="stat-card"><div class="stat-num" id="statRole">A</div><div class="stat-label">扮演角色</div></div>
+    </div>
+    <p class="stats-note" id="statsNote"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="statsClose">关闭</button>
+      <button class="btn-save" id="statsRestart">🔄 再练一次</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden silent audio for iOS silent mode unlock -->
+<audio id="silentAudio" loop preload="auto"></audio>
+
+<script>
+// 0.5s silent WAV (16-bit mono 44100Hz) - unlocks iOS Playback audio session category
+const SILENT_AUDIO_SRC = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+</script>
+<script src="js/config.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/speech.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
