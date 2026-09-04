@@ -250,7 +250,7 @@ function updatePlayButton() {
   if (isMyTurn) {
     if (practiceMode === 'recite') {
       icon.textContent = '💡';
-      label.textContent = '提示(按住)';
+      label.textContent = '提示';
     } else {
       icon.textContent = '✅';
       label.textContent = '读完了';
