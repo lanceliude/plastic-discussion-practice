@@ -1,12 +1,15 @@
 // Speech Recognition + incremental word reveal (Duolingo-style)
+// Mic stays open throughout recite mode to avoid repeated iOS system prompt sounds
 let recognition = null;
 let speechSupported = false;
 let speechEnabled = true;
 let isListening = false;
+let recognitionActive = false;  // mic is open (even if ignoring results)
+let ignoreResults = false;      // ignore results during other characters' lines
 let matchedWordCount = 0;
 let currentSentenceWords = [];
 let finalTranscript = '';
-let onAllMatched = null;  // callback when all words matched
+let onAllMatched = null;
 let autoContinueTimer = null;
 
 // Detect support
@@ -19,23 +22,65 @@ let autoContinueTimer = null;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
+    
+    // Bind event handlers once (not per start)
+    recognition.onresult = handleRecognitionResult;
+    recognition.onend = handleRecognitionEnd;
+    recognition.onerror = handleRecognitionError;
   }
 })();
 
-// Mic on-demand: stop when page hidden, restart when visible and still my turn
+function handleRecognitionResult(event) {
+  if (ignoreResults) return;  // ignore during other characters' lines
+  
+  let interim = '';
+  let final = '';
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    const transcript = event.results[i][0].transcript;
+    if (event.results[i].isFinal) {
+      final += transcript + ' ';
+    } else {
+      interim += transcript;
+    }
+  }
+  if (final) finalTranscript += final;
+  const combined = (finalTranscript + ' ' + interim).trim();
+  matchWords(combined);
+}
+
+function handleRecognitionEnd() {
+  isListening = false;
+  // Auto-restart if mic should stay active (recite mode in progress)
+  if (recognitionActive && !document.hidden && speechSupported && speechEnabled) {
+    try { recognition.start(); isListening = true; } catch(e) {}
+  }
+  updateSpeechStatus(isListening);
+}
+
+function handleRecognitionError(event) {
+  console.warn('Speech recognition error:', event.error);
+  if (event.error === 'not-allowed') {
+    speechEnabled = false;
+    recognitionActive = false;
+    alert('麦克风权限被拒绝，语音识别已关闭。');
+  }
+}
+
+// Page visibility: stop mic when hidden, restart when visible if in recite mode
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    // Page hidden (switched to another app) - stop mic immediately
-    if (isListening && recognition) {
+    if (recognition) {
+      recognitionActive = false;
       try { recognition.stop(); } catch(e) {}
       isListening = false;
       updateSpeechStatus(false);
     }
   } else {
-    // Page visible again - restart mic if still in recite mode my turn
-    if (isMyTurn && practiceMode === 'recite' && speechEnabled && speechSupported) {
+    // Restart if we were in recite mode with mic active
+    if (practiceMode === 'recite' && speechEnabled && speechSupported) {
       setTimeout(() => {
-        if (isMyTurn && !isListening) {
+        if (practiceMode === 'recite' && !isListening) {
+          recognitionActive = true;
           try { recognition.start(); isListening = true; updateSpeechStatus(true); } catch(e) {}
         }
       }, 300);
@@ -43,8 +88,8 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Also stop on page unload
 window.addEventListener('pagehide', () => {
+  recognitionActive = false;
   if (recognition) { try { recognition.stop(); } catch(e) {} }
 });
 
@@ -73,6 +118,8 @@ function wordsMatch(word1, word2, threshold = 0.65) {
   return (1 - dist / maxLen) >= threshold;
 }
 
+// Start/reset recognition for a user sentence
+// If mic already active, just reset matching state (no restart = no prompt sound)
 function startSpeechRecognition(sentenceText, allMatchedCallback) {
   if (!speechSupported || !speechEnabled) return;
   
@@ -80,66 +127,51 @@ function startSpeechRecognition(sentenceText, allMatchedCallback) {
   finalTranscript = '';
   currentSentenceWords = sentenceText.split(/\s+/).filter(w => w.length > 0);
   onAllMatched = allMatchedCallback;
+  ignoreResults = false;
   
   renderSentenceBlanks();
   
-  try {
-    recognition.start();
-    isListening = true;
-    updateSpeechStatus(true);
-  } catch(e) {
-    console.warn('Recognition start failed:', e);
+  if (!recognitionActive) {
+    // First time starting - mic will open (one prompt sound)
+    recognitionActive = true;
+    try {
+      recognition.start();
+      isListening = true;
+      updateSpeechStatus(true);
+    } catch(e) {
+      console.warn('Recognition start failed:', e);
+    }
   }
-  
-  recognition.onresult = (event) => {
-    let interim = '';
-    let final = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        final += transcript + ' ';
-      } else {
-        interim += transcript;
-      }
-    }
-    if (final) finalTranscript += final;
-    const combined = (finalTranscript + ' ' + interim).trim();
-    matchWords(combined);
-  };
-  
-  // Auto-restart ONLY if page is visible and still my turn
-  recognition.onend = () => {
-    if (isMyTurn && practiceMode === 'recite' && speechEnabled && !document.hidden) {
-      try { recognition.start(); } catch(e) {}
-    } else {
-      isListening = false;
-      updateSpeechStatus(false);
-    }
-  };
-  
-  recognition.onerror = (event) => {
-    console.warn('Speech recognition error:', event.error);
-    if (event.error === 'not-allowed') {
-      speechEnabled = false;
-      alert('麦克风权限被拒绝，语音识别已关闭。可在显示选项中重新开启。');
-    }
-  };
+  // If already active, mic stays open - no prompt sound, just reset matching
 }
 
+// Pause: keep mic open but ignore results (during other characters' lines)
+function pauseRecognition() {
+  ignoreResults = true;
+}
+
+// Resume: start accepting results again for new sentence
+function resumeRecognition(sentenceText, allMatchedCallback) {
+  startSpeechRecognition(sentenceText, allMatchedCallback);
+}
+
+// Full stop: close mic (only at end of practice or mode switch)
 function stopSpeechRecognition() {
   if (autoContinueTimer) {
     clearTimeout(autoContinueTimer);
     autoContinueTimer = null;
   }
+  recognitionActive = false;
+  ignoreResults = false;
   if (recognition && isListening) {
     isListening = false;
-    try { recognition.onend = null; recognition.stop(); } catch(e) {}
+    try { recognition.stop(); } catch(e) {}
     updateSpeechStatus(false);
   }
 }
 
 function matchWords(transcript) {
-  if (!currentSentenceWords.length) return;
+  if (!currentSentenceWords.length || ignoreResults) return;
   
   const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
   if (!spokenWords.length) return;

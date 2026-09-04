@@ -75,6 +75,9 @@ roleSeg.addEventListener('click', (e) => {
   saveRole(selectedRole);
   updateRoleSegUI();
   renderTranscript();
+  if (selectedRole === 'ALL') {
+    stopSpeechRecognition();  // close mic in read-through mode
+  }
   if (isMyTurn && (selectedRole === 'ALL' || !isMySentence(dialogues[currentIndex]))) {
     myTurnDone();
   }
@@ -97,12 +100,14 @@ modeSeg.addEventListener('click', (e) => {
   // If currently in my turn, re-render to switch between full text and blanks
   if (isMyTurn && dialogues[currentIndex]) {
     if (practiceMode === 'recite' && speechSupported && speechEnabled) {
-      stopSpeechRecognition();
+      // Mic stays open, just reset matching state (no stop/start = no prompt sound)
       startSpeechRecognition(dialogues[currentIndex].text, onAllWordsMatched);
     } else {
-      stopSpeechRecognition();
+      stopSpeechRecognition();  // close mic when switching to read mode
       renderTranscript();
     }
+  } else if (practiceMode !== 'recite') {
+    stopSpeechRecognition();  // close mic when switching to read mode outside my turn
   }
   updatePlayButton();
 });
@@ -192,7 +197,7 @@ function playSentence(index) {
     }
   } else {
     isMyTurn = false;
-    stopSpeechRecognition();
+    pauseRecognition();  // keep mic open but ignore results (avoids iOS prompt sound)
     hideMyTurnBanner();
     pausedAt = d.startTime;
     startPlayback(d.startTime, d.endTime - d.startTime);
@@ -281,7 +286,17 @@ function hintPressEnd(e) {
   }
 }
 
-// Hint button: use mouse events only (touch simulates mouse on mobile)
+// Hint button: touch events for mobile (preventDefault only in recite mode my turn)
+playBtn.addEventListener('touchstart', (e) => {
+  if (isMyTurn && practiceMode === 'recite' && currentSentenceWords.length > 0) {
+    e.preventDefault();
+    isHintPressed = true;
+    showFullSentence();
+  }
+}, { passive: false });
+playBtn.addEventListener('touchend', hintPressEnd);
+playBtn.addEventListener('touchcancel', hintPressEnd);
+// Mouse events for desktop
 playBtn.addEventListener('mousedown', hintPressStart);
 playBtn.addEventListener('mouseup', hintPressEnd);
 playBtn.addEventListener('mouseleave', hintPressEnd);
@@ -297,7 +312,6 @@ playBtn.addEventListener('click', (e) => {
 function goPrev() {
   if (currentIndex > 0) {
     stopCurrentSource();
-    stopSpeechRecognition();
     isPlaying = false;
     isMyTurn = false;
     hideMyTurnBanner();
@@ -306,7 +320,6 @@ function goPrev() {
 }
 function goNext() {
   stopCurrentSource();
-  stopSpeechRecognition();
   isPlaying = false;
   isMyTurn = false;
   hideMyTurnBanner();
@@ -318,7 +331,7 @@ function myTurnDone() {
   if (isMyTurn && practiceMode === 'recite' && currentSentenceWords.length > 0) {
     finalizeSentenceBlanks();
   }
-  stopSpeechRecognition();
+  // Don't stop recognition here - mic stays open throughout recite mode
   isMyTurn = false;
   hideMyTurnBanner();
   if (currentIndex + 1 >= TOTAL) finishPractice();
@@ -378,7 +391,6 @@ transcriptEl.addEventListener('click', (e) => {
   const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
   if (idx === -1 || idx >= TOTAL) return;
   stopCurrentSource();
-  stopSpeechRecognition();
   isPlaying = false;
   isMyTurn = false;
   hideMyTurnBanner();
