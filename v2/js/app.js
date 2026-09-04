@@ -338,8 +338,10 @@ document.getElementById('statsRestart').addEventListener('click', restartPractic
 statsModal.addEventListener('click', (e) => { if (e.target === statsModal) statsModal.classList.remove('show'); });
 
 // Guide panel
-document.getElementById('guideClose').addEventListener('click', () => guidePanel.classList.add('collapsed'));
-document.getElementById('guideExpand').addEventListener('click', () => guidePanel.classList.remove('collapsed'));
+const guideCloseBtn = document.getElementById('guideClose');
+if (guideCloseBtn) guideCloseBtn.addEventListener('click', () => guidePanel.classList.add('collapsed'));
+const guideExpandBtn = document.getElementById('guideExpand');
+if (guideExpandBtn) guideExpandBtn.addEventListener('click', () => guidePanel.classList.remove('collapsed'));
 document.getElementById('guideBtn').addEventListener('click', () => {
   guidePanel.classList.toggle('collapsed');
   if (!guidePanel.classList.contains('collapsed')) guidePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
