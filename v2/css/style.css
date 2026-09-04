@@ -69,10 +69,20 @@ body {
 
 /* Mode + translation same row */
 .mode-translate-row {
-  display: flex; gap: 8px; margin-bottom: 14px; align-items: stretch;
+  display: flex; gap: 6px; margin-bottom: 14px; align-items: stretch;
+  flex-wrap: nowrap;
 }
-.mode-translate-row .mode-seg { flex: 2; margin-bottom: 0; }
-.mode-translate-row .toggle-btn { flex: 1; padding: 10px 6px; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.mode-translate-row .mode-seg {
+  flex: 2; margin-bottom: 0; min-width: 0; gap: 6px;
+}
+.mode-translate-row .mode-btn {
+  padding: 10px 4px; font-size: 13px; white-space: nowrap; overflow: hidden;
+}
+.mode-translate-row .toggle-btn {
+  flex: 1; padding: 10px 4px; font-size: 13px; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center; min-width: 0;
+  overflow: hidden;
+}
 
 /* Toggle buttons (translation / speech) */
 .toggle-row { display: flex; gap: 8px; margin-bottom: 14px; }

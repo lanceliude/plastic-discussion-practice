@@ -268,8 +268,8 @@ function updatePlayButton() {
 
 // Hint button: press and hold to show full text in recite mode
 function hintPressStart(e) {
-  e.preventDefault();
   if (isMyTurn && practiceMode === 'recite' && currentSentenceWords.length > 0) {
+    e.preventDefault();
     isHintPressed = true;
     showFullSentence();
   }
