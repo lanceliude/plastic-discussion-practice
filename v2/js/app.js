@@ -281,18 +281,14 @@ function hintPressEnd(e) {
   }
 }
 
-playBtn.addEventListener('touchstart', hintPressStart, { passive: false });
-playBtn.addEventListener('touchend', hintPressEnd);
-playBtn.addEventListener('touchcancel', hintPressEnd);
+// Hint button: use mouse events only (touch simulates mouse on mobile)
 playBtn.addEventListener('mousedown', hintPressStart);
 playBtn.addEventListener('mouseup', hintPressEnd);
 playBtn.addEventListener('mouseleave', hintPressEnd);
 
-// But also allow click for read mode (读完了)
+// Click handler: toggle play, except in recite mode my turn (hold for hint)
 playBtn.addEventListener('click', (e) => {
   if (isMyTurn && practiceMode === 'recite') {
-    // In recite mode, click does nothing (hold for hint)
-    e.preventDefault();
     return;
   }
   togglePlay();

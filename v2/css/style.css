@@ -69,19 +69,38 @@ body {
 
 /* Mode + translation same row */
 .mode-translate-row {
-  display: flex; gap: 6px; margin-bottom: 14px; align-items: stretch;
-  flex-wrap: nowrap;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 6px;
+  margin-bottom: 14px;
+  align-items: stretch;
+  width: 100%;
 }
 .mode-translate-row .mode-seg {
-  flex: 2; margin-bottom: 0; min-width: 0; gap: 6px;
+  flex: 2 1 0 !important;
+  margin-bottom: 0 !important;
+  min-width: 0 !important;
+  gap: 6px;
+  display: flex;
 }
 .mode-translate-row .mode-btn {
-  padding: 10px 4px; font-size: 13px; white-space: nowrap; overflow: hidden;
+  flex: 1 1 0 !important;
+  padding: 10px 2px;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
 }
 .mode-translate-row .toggle-btn {
-  flex: 1; padding: 10px 4px; font-size: 13px; white-space: nowrap;
-  display: flex; align-items: center; justify-content: center; min-width: 0;
+  flex: 1 1 0 !important;
+  padding: 10px 2px;
+  font-size: 14px;
+  white-space: nowrap;
   overflow: hidden;
+  min-width: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Toggle buttons (translation / speech) */
