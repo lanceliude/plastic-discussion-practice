@@ -765,8 +765,6 @@ function updateProgress() {
 // ============================================================
 //  Web Audio API: sample-accurate playback (no MP3 seek drift)
 // ============================================================
-let gainNode = null;
-
 async function initAudio() {
   try {
     // Decode audio with a temp context (don't keep it — iOS requires
@@ -785,16 +783,6 @@ async function initAudio() {
   }
 }
 
-function ensureAudioContext() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    gainNode = audioCtx.createGain();
-    gainNode.gain.value = 1.0;
-    gainNode.connect(audioCtx.destination);
-  }
-  return audioCtx;
-}
-
 function stopCurrentSource() {
   if (currentSource) {
     try { currentSource.onended = null; currentSource.stop(); } catch(e) {}
@@ -811,32 +799,31 @@ function startPlayback(offset, duration) {
   stopCurrentSource();
   if (!audioReady || !audioBuffer) return;
 
-  ensureAudioContext();
-
-  const doStart = () => {
-    currentSource = audioCtx.createBufferSource();
-    currentSource.buffer = audioBuffer;
-    currentSource.playbackRate.value = playbackRate;
-    currentSource.connect(gainNode);
-    sourceStartTime = audioCtx.currentTime;
-    sourceOffset = offset;
-    currentSource.onended = () => {
-      if (isPlaying) {
-        isPlaying = false;
-        currentSource = null;
-        setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
-      }
-    };
-    currentSource.start(0, offset, Math.max(0.01, duration));
-    isPlaying = true;
-    updatePlayButton();
-  };
-
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().then(doStart).catch(() => doStart());
-  } else {
-    doStart();
+  // Create AudioContext inside user gesture (iOS requirement)
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
+  // Sync resume — don't wait for promise, start immediately
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  currentSource = audioCtx.createBufferSource();
+  currentSource.buffer = audioBuffer;
+  currentSource.playbackRate.value = playbackRate;
+  currentSource.connect(audioCtx.destination);
+  sourceStartTime = audioCtx.currentTime;
+  sourceOffset = offset;
+  currentSource.onended = () => {
+    if (isPlaying) {
+      isPlaying = false;
+      currentSource = null;
+      setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
+    }
+  };
+  currentSource.start(0, offset, Math.max(0.01, duration));
+  isPlaying = true;
+  updatePlayButton();
 }
 
 // ============================================================
