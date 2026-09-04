@@ -551,6 +551,7 @@
   </div>
 </div>
 
+<audio id="silentAudio" loop preload="auto" style="display:none"></audio>
 <div class="transcript" id="transcript"></div>
 
 <div class="dock">
@@ -667,6 +668,7 @@ function unlockIOSAudioSession() {
   if (iosSessionUnlocked) return;
   if (!silentAudio) {
     silentAudio = document.getElementById('silentAudio');
+    if (!silentAudio) return;
     silentAudio.src = SILENT_AUDIO_SRC;
     silentAudio.volume = 0.0001;
   }
