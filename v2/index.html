@@ -24,19 +24,6 @@
   </div>
 </div>
 
-<!-- Guide panel -->
-<div class="guide-panel" id="guidePanel">
-  <button class="guide-close" id="guideClose">✕</button>
-  <h3>📖 使用说明</h3>
-  <ol>
-    <li><b>选角色</b>：选 A / B / C 扮演，或选「通读」全程自动播放。</li>
-    <li><b>选模式</b>：朗读模式看着读；背诵模式台词变横线，读对的词逐个亮出来。</li>
-    <li><b>开始</b>：点底部 ▶ 开始，轮到你时底部红条闪烁。</li>
-    <li><b>背诵提示</b>：背诵模式下按住「💡提示」可看全文，松开恢复。</li>
-    <li><b>操作</b>：点任意台词可跳转；空格=播放/暂停，←→=上一句/下一句。</li>
-  </ol>
-</div>
-
 <!-- Controls -->
 <div class="controls">
   <div class="control-label">选择角色</div>
@@ -47,16 +34,13 @@
     <button class="seg-btn" data-role="ALL">通读</button>
   </div>
 
-  <div class="control-label">练习模式</div>
-  <div class="mode-seg" id="modeSeg">
-    <button class="mode-btn active" data-mode="read">📖 朗读</button>
-    <button class="mode-btn" data-mode="recite">🧠 背诵</button>
-  </div>
-
-  <div class="control-label">显示选项</div>
-  <div class="toggle-row">
-    <button class="toggle-btn" id="translateBtn">🌐 中文翻译</button>
-    <button class="toggle-btn active" id="speechToggleBtn">🎤 语音识别</button>
+  <div class="control-label">练习模式与显示</div>
+  <div class="mode-translate-row">
+    <div class="mode-seg" id="modeSeg">
+      <button class="mode-btn active" data-mode="read">📖 朗读</button>
+      <button class="mode-btn" data-mode="recite">🧠 背诵</button>
+    </div>
+    <button class="toggle-btn" id="translateBtn">🌐 翻译</button>
   </div>
 
   <div class="control-label">播放速度</div>
@@ -85,6 +69,24 @@
     <button class="dock-btn btn-secondary" id="nextBtn">
       <span class="btn-icon">⏭</span><span>下一句</span>
     </button>
+  </div>
+</div>
+
+<!-- Guide modal -->
+<div class="modal" id="guideModal">
+  <div class="modal-content">
+    <h2>📖 使用说明</h2>
+    <ol style="padding-left:20px;line-height:1.8;font-size:14px;color:#444;">
+      <li><b>选角色</b>：选 A / B / C 扮演，或选「通读」全程自动播放。</li>
+      <li><b>选模式</b>：朗读模式看着读；背诵模式台词变横线，读对的词逐个亮出来，全对自动继续。</li>
+      <li><b>开始</b>：点底部 ▶ 开始，轮到你时底部红条闪烁。</li>
+      <li><b>背诵提示</b>：背诵模式下按住「💡提示」可看全文，松开恢复（已识别的词不消失）。</li>
+      <li><b>中文翻译</b>：点「🌐翻译」开关，每句英文下面显示中文。</li>
+      <li><b>操作</b>：点任意台词可跳转；空格=播放/暂停，←→=上一句/下一句。</li>
+    </ol>
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn-save" id="guideClose" style="flex:1;">知道了</button>
+    </div>
   </div>
 </div>
 

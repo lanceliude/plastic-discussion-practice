@@ -22,13 +22,12 @@ const playBtn = document.getElementById('playBtn');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const statsModal = document.getElementById('statsModal');
-const guidePanel = document.getElementById('guidePanel');
+const guideModal = document.getElementById('guideModal');
 const roleSeg = document.getElementById('roleSeg');
 const modeSeg = document.getElementById('modeSeg');
 const myTurnBar = document.getElementById('myTurnBar');
 const myTurnText = document.getElementById('myTurnText');
 const translateBtn = document.getElementById('translateBtn');
-const speechToggleBtn = document.getElementById('speechToggleBtn');
 
 function isMySentence(d) {
   return selectedRole !== 'ALL' && d.role === selectedRole;
@@ -40,15 +39,14 @@ function loadSettings() {
     const r = localStorage.getItem('dp_role');
     const s = localStorage.getItem('dp_speed');
     const t = localStorage.getItem('dp_translation');
-    const sp = localStorage.getItem('dp_speech');
     const m = localStorage.getItem('dp_mode');
     if (r) selectedRole = r;
     if (s) { playbackRate = parseFloat(s); speedRange.value = s; speedVal.textContent = s + 'x'; }
     if (m) practiceMode = m;
     if (t === 'true') { showTranslation = true; document.body.classList.add('show-zh'); translateBtn.classList.add('active'); }
     else { showTranslation = false; document.body.classList.remove('show-zh'); translateBtn.classList.remove('active'); }
-    if (sp === 'false') { speechEnabled = false; speechToggleBtn.classList.remove('active'); }
-    else { speechEnabled = true; speechToggleBtn.classList.add('active'); }
+    // speechEnabled is now fully automatic (on in recite mode + my turn, off otherwise)
+    speechEnabled = true;
   } catch(e) {}
   updateRoleSegUI();
   updateModeSegUI();
@@ -115,21 +113,6 @@ translateBtn.addEventListener('click', () => {
   document.body.classList.toggle('show-zh', showTranslation);
   translateBtn.classList.toggle('active', showTranslation);
   try { localStorage.setItem('dp_translation', showTranslation); } catch(e) {}
-});
-
-// Speech recognition toggle
-speechToggleBtn.addEventListener('click', () => {
-  if (!speechSupported) {
-    alert('当前浏览器不支持语音识别功能。请使用 Chrome 或 Safari。');
-    return;
-  }
-  speechEnabled = !speechEnabled;
-  speechToggleBtn.classList.toggle('active', speechEnabled);
-  try { localStorage.setItem('dp_speech', speechEnabled); } catch(e) {}
-  if (!speechEnabled) stopSpeechRecognition();
-  else if (isMyTurn && practiceMode === 'recite' && dialogues[currentIndex]) {
-    startSpeechRecognition(dialogues[currentIndex].text, onAllWordsMatched);
-  }
 });
 
 // Render transcript
@@ -430,15 +413,10 @@ document.addEventListener('keydown', (e) => {
   else if (e.code === 'ArrowRight') { e.preventDefault(); if (isMyTurn) myTurnDone(); else goNext(); }
 });
 
-// Guide panel
-const guideCloseBtn = document.getElementById('guideClose');
-if (guideCloseBtn) guideCloseBtn.addEventListener('click', () => guidePanel.classList.add('collapsed'));
-const guideExpandBtn = document.getElementById('guideExpand');
-if (guideExpandBtn) guideExpandBtn.addEventListener('click', () => guidePanel.classList.remove('collapsed'));
-document.getElementById('guideBtn').addEventListener('click', () => {
-  guidePanel.classList.toggle('collapsed');
-  if (!guidePanel.classList.contains('collapsed')) guidePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
+// Guide modal
+document.getElementById('guideBtn').addEventListener('click', () => guideModal.classList.add('show'));
+document.getElementById('guideClose').addEventListener('click', () => guideModal.classList.remove('show'));
+guideModal.addEventListener('click', (e) => { if (e.target === guideModal) guideModal.classList.remove('show'); });
 
 // Button events
 prevBtn.addEventListener('click', goPrev);

@@ -67,6 +67,13 @@ body {
   color: white; box-shadow: 0 2px 8px rgba(26,122,92,0.3);
 }
 
+/* Mode + translation same row */
+.mode-translate-row {
+  display: flex; gap: 8px; margin-bottom: 14px; align-items: stretch;
+}
+.mode-translate-row .mode-seg { flex: 2; margin-bottom: 0; }
+.mode-translate-row .toggle-btn { flex: 1; padding: 10px 6px; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
 /* Toggle buttons (translation / speech) */
 .toggle-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .toggle-btn {
