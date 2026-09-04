@@ -196,12 +196,21 @@ function matchWords(transcript) {
         foundIdx = i;
         break;
       }
-      // 2. Compound word match: merge current + next word (e.g. "ground water" -> "groundwater")
+      // 2. Two-word compound (e.g. "ground water" -> "groundwater", "single use" -> "single-use")
       if (i + 1 < spokenWords.length) {
-        const compound = spokenWords[i] + spokenWords[i+1];
-        if (wordsMatch(targetWord, compound)) {
+        const compound2 = spokenWords[i] + spokenWords[i+1];
+        if (wordsMatch(targetWord, compound2)) {
           found = true;
-          foundIdx = i + 1;  // consume both words
+          foundIdx = i + 1;
+          break;
+        }
+      }
+      // 3. Three-word compound (e.g. "hard to recycle" -> "hard-to-recycle")
+      if (i + 2 < spokenWords.length) {
+        const compound3 = spokenWords[i] + spokenWords[i+1] + spokenWords[i+2];
+        if (wordsMatch(targetWord, compound3)) {
+          found = true;
+          foundIdx = i + 2;
           break;
         }
       }
