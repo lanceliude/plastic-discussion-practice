@@ -34,19 +34,19 @@ let lastMatchedSpokenIdx = -1;  // ensures sequential matching, no look-ahead le
 function handleRecognitionResult(event) {
   if (ignoreResults) return;  // ignore during other characters' lines
   
-  let interim = '';
+  // Only use FINAL results, ignore interim results.
+  // Interim results can contain predicted words the user hasn't spoken yet,
+  // which causes words like "plastic" to appear early.
   let final = '';
   for (let i = event.resultIndex; i < event.results.length; i++) {
-    const transcript = event.results[i][0].transcript;
     if (event.results[i].isFinal) {
-      final += transcript + ' ';
-    } else {
-      interim += transcript;
+      final += event.results[i][0].transcript + ' ';
     }
   }
-  if (final) finalTranscript += final;
-  const combined = (finalTranscript + ' ' + interim).trim();
-  matchWords(combined);
+  if (final) {
+    finalTranscript += final;
+    matchWords(finalTranscript);
+  }
 }
 
 function handleRecognitionEnd() {
