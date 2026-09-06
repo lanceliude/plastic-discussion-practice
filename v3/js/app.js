@@ -431,15 +431,18 @@ transcriptEl.addEventListener('click', (e) => {
   if (!sentenceEl) return;
   const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
   if (idx === -1 || idx >= TOTAL) return;
+  // Only select the sentence, don't auto-play (user must press play button)
   stopCurrentSource();
+  stopSpeechRecognition();
   isPlaying = false;
   isMyTurn = false;
   hideMyTurnBanner();
-  if (!practiceStarted) {
-    practiceStarted = true;
-    practiceStartTime = Date.now();
-  }
-  playSentence(idx);
+  currentIndex = idx;
+  renderTranscript();
+  updateProgress();
+  updatePlayButton();
+  // Scroll to selected sentence
+  setTimeout(() => sentenceEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
 });
 
 // Speed control

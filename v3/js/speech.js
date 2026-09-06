@@ -370,6 +370,19 @@ function speakWord(word) {
   const utterance = new SpeechSynthesisUtterance(word);
   utterance.lang = 'en-US';
   utterance.rate = 0.85;
+  
+  // Pause recognition during TTS playback (avoid recognizing TTS audio, which corrupts matching)
+  const wasIgnoring = ignoreResults;
+  pauseRecognition();
+  
+  const resume = () => {
+    if (!wasIgnoring && isMyTurn && practiceMode === 'recite') {
+      resumeRecognitionKeepState();
+    }
+  };
+  utterance.onend = resume;
+  utterance.onerror = resume;
+  
   window.speechSynthesis.speak(utterance);
 }
 
@@ -450,7 +463,7 @@ if (transcriptElForWords) {
     // Clicking words in other sentences lets event bubble to select that paragraph
     const wordSpan = e.target.closest('.sentence.current .sentence-text span');
     if (wordSpan) {
-      e.stopPropagation();  // prevent paragraph jump (which would reset matched words)
+      e.stopImmediatePropagation();  // prevent paragraph jump listener on same element
       // Prefer data-word attribute (works for blank lines too), fallback to textContent
       const word = (wordSpan.dataset.word || wordSpan.textContent || '').trim();
       if (word && !/^_+$/.test(word)) {
