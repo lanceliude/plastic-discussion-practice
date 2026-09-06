@@ -415,14 +415,16 @@ function showWordTooltip(word, clickX, clickY) {
   tooltipTranslationEl.textContent = '加载中...';
   wordTooltip.style.display = 'block';
   
-  // Position tooltip above the clicked word (transform: translateX(-50%) handles centering)
-  let left = clickX;
-  left = Math.max(120, Math.min(left, window.innerWidth - 120));
-  let top = clickY - 100;
-  if (top < 10) top = clickY + 30;
-  
-  wordTooltip.style.left = left + 'px';
-  wordTooltip.style.top = top + 'px';
+  // Position tooltip after browser reflow (requestAnimationFrame ensures correct positioning)
+  requestAnimationFrame(() => {
+    let left = clickX;
+    left = Math.max(120, Math.min(left, window.innerWidth - 120));
+    let top = clickY - 100;
+    if (top < 10) top = clickY + 30;
+    
+    wordTooltip.style.left = left + 'px';
+    wordTooltip.style.top = top + 'px';
+  });
   
   // Fetch translation
   translateWord(word).then(translation => {
@@ -439,24 +441,33 @@ function hideWordTooltip() {
 }
 
 // Click delegation: detect clicks on word spans (ONLY within current sentence)
-document.addEventListener('click', (e) => {
-  // Only trigger word lookup within the CURRENT sentence
-  // Clicking words in other sentences selects that sentence (handled by app.js)
-  const wordSpan = e.target.closest('.sentence.current .sentence-text span');
-  if (wordSpan) {
-    e.stopPropagation();
-    // Prefer data-word attribute (works for blank lines too), fallback to textContent
-    const word = (wordSpan.dataset.word || wordSpan.textContent || '').trim();
-    if (word && !/^_+$/.test(word)) {
-      const rect = wordSpan.getBoundingClientRect();
-      showWordTooltip(word, rect.left + rect.width / 2, rect.top);
-      // Auto-speak the word
-      speakWord(word);
+// Bound to transcriptEl (registered before app.js's paragraph jump listener)
+// so we can stopPropagation and prevent resetting matched state.
+const transcriptElForWords = document.getElementById('transcript');
+if (transcriptElForWords) {
+  transcriptElForWords.addEventListener('click', (e) => {
+    // Only trigger word lookup within the CURRENT sentence
+    // Clicking words in other sentences lets event bubble to select that paragraph
+    const wordSpan = e.target.closest('.sentence.current .sentence-text span');
+    if (wordSpan) {
+      e.stopPropagation();  // prevent paragraph jump (which would reset matched words)
+      // Prefer data-word attribute (works for blank lines too), fallback to textContent
+      const word = (wordSpan.dataset.word || wordSpan.textContent || '').trim();
+      if (word && !/^_+$/.test(word)) {
+        const rect = wordSpan.getBoundingClientRect();
+        showWordTooltip(word, rect.left + rect.width / 2, rect.top);
+        // Auto-speak the word
+        speakWord(word);
+      }
     }
-    return;
+  });
+}
+
+// Click elsewhere on page: hide tooltip
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.word-tooltip') && !e.target.closest('.sentence.current .sentence-text span')) {
+    hideWordTooltip();
   }
-  // Click elsewhere (including other sentences): hide tooltip
-  hideWordTooltip();
 });
 
 // Stop TTS when page hidden

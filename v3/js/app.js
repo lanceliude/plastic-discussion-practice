@@ -274,6 +274,17 @@ function updatePlayButton() {
     icon.textContent = '▶';
     label.textContent = '继续';
   }
+  
+  // Next button label: "跳过" in recite mode my turn, "下一句" otherwise
+  const nextIcon = nextBtn.querySelector('.btn-icon');
+  const nextLabel = nextBtn.querySelector('span:last-child');
+  if (isMyTurn && practiceMode === 'recite') {
+    nextIcon.textContent = '⏭';
+    nextLabel.textContent = '跳过';
+  } else {
+    nextIcon.textContent = '⏭';
+    nextLabel.textContent = '下一句';
+  }
 }
 
 // Hint button: press and hold to show full text in recite mode
