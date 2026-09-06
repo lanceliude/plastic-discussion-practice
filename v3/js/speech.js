@@ -371,17 +371,24 @@ function speakWord(word) {
   utterance.lang = 'en-US';
   utterance.rate = 0.85;
   
-  // Pause recognition during TTS playback (avoid recognizing TTS audio, which corrupts matching)
+  // Pause recognition during TTS playback (avoid recognizing TTS audio)
   const wasIgnoring = ignoreResults;
   pauseRecognition();
   
+  // Resume recognition - with safety timeout in case onend/onerror doesn't fire
+  let resumed = false;
   const resume = () => {
-    if (!wasIgnoring && isMyTurn && practiceMode === 'recite') {
-      resumeRecognitionKeepState();
+    if (resumed) return;
+    resumed = true;
+    if (!wasIgnoring) {
+      ignoreResults = false;
+      finalTranscript = '';
+      lastMatchedSpokenIdx = -1;
     }
   };
   utterance.onend = resume;
   utterance.onerror = resume;
+  setTimeout(resume, 5000);  // force resume after 5s max
   
   window.speechSynthesis.speak(utterance);
 }
