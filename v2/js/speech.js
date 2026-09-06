@@ -6,7 +6,7 @@ let speechEnabled = true;
 let isListening = false;
 let recognitionActive = false;  // mic is open (even if ignoring results)
 let ignoreResults = false;      // ignore results during other characters' lines
-let matchedWordCount = 0;
+let matchedWords = [];  // array of booleans: which target words have been matched (allows skipping)
 let currentSentenceWords = [];
 let finalTranscript = '';
 let onAllMatched = null;
@@ -42,18 +42,23 @@ const isIOSSafari = isIOS && isSafari;
 function handleRecognitionResult(event) {
   if (ignoreResults) return;  // ignore during other characters' lines
   
-  // Only use FINAL results, ignore interim results.
-  // Interim results can contain predicted words the user hasn't spoken yet,
-  // which causes words like "plastic" to appear early.
+  // Use both interim (real-time) and final results for fast feedback.
+  // The new matching algorithm allows skipping unrecognized words,
+  // so one unclear word won't block all following words.
+  let interim = '';
   let final = '';
   for (let i = event.resultIndex; i < event.results.length; i++) {
+    const transcript = event.results[i][0].transcript;
     if (event.results[i].isFinal) {
-      final += event.results[i][0].transcript + ' ';
+      final += transcript + ' ';
+    } else {
+      interim += transcript;
     }
   }
-  if (final) {
-    finalTranscript += final;
-    matchWords(finalTranscript);
+  if (final) finalTranscript += final;
+  const combined = (finalTranscript + ' ' + interim).trim();
+  if (combined) {
+    matchWords(combined);
   }
 }
 
@@ -145,9 +150,9 @@ function wordsMatch(word1, word2, threshold = 0.65) {
 function startSpeechRecognition(sentenceText, allMatchedCallback) {
   if (!speechSupported || !speechEnabled) return;
   
-  matchedWordCount = 0;
   finalTranscript = '';
   currentSentenceWords = sentenceText.split(/\s+/).filter(w => w.length > 0);
+  matchedWords = new Array(currentSentenceWords.length).fill(false);
   onAllMatched = allMatchedCallback;
   ignoreResults = false;
   lastMatchedSpokenIdx = -1;
@@ -203,15 +208,20 @@ function matchWords(transcript) {
   if (!spokenWords.length) return;
   
   let newMatches = 0;
-  const searchWindow = 3;  // only look ahead 3 words from last match position
+  let lastSpokenIdx = lastMatchedSpokenIdx;  // track position in spoken words (must increase)
   
-  while (matchedWordCount < currentSentenceWords.length) {
-    const targetWord = currentSentenceWords[matchedWordCount];
-    // Start searching from after the last matched position (strictly sequential)
-    const startIdx = Math.max(0, lastMatchedSpokenIdx + 1);
-    const endIdx = Math.min(spokenWords.length, startIdx + searchWindow);
+  // Iterate ALL target words - allow skipping words that weren't recognized clearly
+  // (Duolingo-style: one missed word doesn't block all following words)
+  for (let targetIdx = 0; targetIdx < currentSentenceWords.length; targetIdx++) {
+    if (matchedWords[targetIdx]) continue;  // already matched
+    
+    const targetWord = currentSentenceWords[targetIdx];
     let found = false;
     let foundIdx = -1;
+    
+    // Search from after the last matched position (ensures order, allows gaps)
+    const startIdx = Math.max(0, lastSpokenIdx + 1);
+    const endIdx = spokenWords.length;  // search all remaining words (not limited window)
     
     for (let i = startIdx; i < endIdx; i++) {
       // 1. Single word match
@@ -220,7 +230,7 @@ function matchWords(transcript) {
         foundIdx = i;
         break;
       }
-      // 2. Two-word compound (e.g. "ground water" -> "groundwater", "single use" -> "single-use")
+      // 2. Two-word compound (e.g. "ground water" -> "groundwater")
       if (i + 1 < spokenWords.length) {
         const compound2 = spokenWords[i] + spokenWords[i+1];
         if (wordsMatch(targetWord, compound2)) {
@@ -241,12 +251,12 @@ function matchWords(transcript) {
     }
     
     if (found) {
-      matchedWordCount++;
-      newMatches++;
+      matchedWords[targetIdx] = true;
+      lastSpokenIdx = foundIdx;
       lastMatchedSpokenIdx = foundIdx;
-    } else {
-      break;
+      newMatches++;
     }
+    // If not found: DON'T break, continue to next target word (allow skipping)
   }
   
   if (newMatches > 0) {
@@ -254,7 +264,8 @@ function matchWords(transcript) {
   }
   
   // All words matched - auto continue after delay
-  if (matchedWordCount >= currentSentenceWords.length && onAllMatched && !autoContinueTimer) {
+  const allMatched = matchedWords.length > 0 && matchedWords.every(m => m);
+  if (allMatched && onAllMatched && !autoContinueTimer) {
     autoContinueTimer = setTimeout(() => {
       autoContinueTimer = null;
       if (onAllMatched) {
@@ -272,7 +283,7 @@ function renderSentenceBlanks() {
   
   let html = '';
   currentSentenceWords.forEach((word, i) => {
-    if (i < matchedWordCount) {
+    if (matchedWords[i]) {
       html += `<span class="word-revealed">${word}</span> `;
     } else {
       const display = word.replace(/[a-zA-Z]/g, '_');
@@ -298,7 +309,7 @@ function finalizeSentenceBlanks() {
   
   let html = '';
   currentSentenceWords.forEach((word, i) => {
-    if (i < matchedWordCount) {
+    if (matchedWords[i]) {
       html += `<span class="word-revealed">${word}</span> `;
     } else {
       html += `<span class="word-missed">${word}</span> `;
