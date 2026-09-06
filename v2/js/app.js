@@ -19,7 +19,7 @@ const progressText = document.getElementById('progressText');
 const progressPercent = document.getElementById('progressPercent');
 const progressFill = document.getElementById('progressFill');
 const playBtn = document.getElementById('playBtn');
-const prevBtn = document.getElementById('prevBtn');
+const audioBtn = document.getElementById('audioBtn');
 const nextBtn = document.getElementById('nextBtn');
 const statsModal = document.getElementById('statsModal');
 const guideModal = document.getElementById('guideModal');
@@ -121,6 +121,11 @@ translateBtn.addEventListener('click', () => {
 });
 
 // Render transcript
+// Wrap each word in a span with data-word attribute (for click-to-translate in all modes)
+function wrapWords(text) {
+  return text.replace(/([a-zA-Z]+(?:[''-][a-zA-Z]+)*)/g, '<span data-word="$1">$1</span>');
+}
+
 function renderTranscript() {
   transcriptEl.innerHTML = '';
   dialogues.forEach((d, i) => {
@@ -146,7 +151,7 @@ function renderTranscript() {
         <span class="role-tag role-${roleShort}">${d.role}${mine ? '<span class="my-badge">你</span>' : ''}</span>
         <span class="sentence-num">${i+1}/${TOTAL}</span>
       </div>
-      <div class="sentence-text">${textContent}</div>
+      <div class="sentence-text">${wrapWords(textContent)}</div>
       <div class="sentence-zh">${d.zh}</div>
     `;
     transcriptEl.appendChild(div);
@@ -269,6 +274,17 @@ function updatePlayButton() {
     icon.textContent = '▶';
     label.textContent = '继续';
   }
+  
+  // Next button label: "跳过" in recite mode my turn, "下一句" otherwise
+  const nextIcon = nextBtn.querySelector('.btn-icon');
+  const nextLabel = nextBtn.querySelector('span:last-child');
+  if (isMyTurn && practiceMode === 'recite') {
+    nextIcon.textContent = '⏭';
+    nextLabel.textContent = '跳过';
+  } else {
+    nextIcon.textContent = '⏭';
+    nextLabel.textContent = '下一句';
+  }
 }
 
 // Hint button: press and hold to show full text in recite mode
@@ -308,6 +324,31 @@ playBtn.addEventListener('click', (e) => {
   }
   togglePlay();
 });
+
+// Play original audio of current sentence (for pronunciation reference)
+function playCurrentSentenceAudio() {
+  const d = dialogues[currentIndex];
+  if (!d || !audioBuffer) return;
+  
+  // Pause speech recognition during audio playback (avoid recognizing the audio)
+  pauseRecognition();
+  
+  stopCurrentSource();
+  isPlaying = true;
+  updatePlayButton();
+  
+  const duration = d.endTime - d.startTime;
+  startPlayback(d.startTime, duration);
+  
+  // Restore recognition after playback finishes (keep matched words state)
+  setTimeout(() => {
+    isPlaying = false;
+    updatePlayButton();
+    if (isMyTurn && practiceMode === 'recite') {
+      resumeRecognitionKeepState();
+    }
+  }, duration * 1000 + 200);
+}
 
 function goPrev() {
   if (currentIndex > 0) {
@@ -390,15 +431,18 @@ transcriptEl.addEventListener('click', (e) => {
   if (!sentenceEl) return;
   const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
   if (idx === -1 || idx >= TOTAL) return;
+  // Only select the sentence, don't auto-play (user must press play button)
   stopCurrentSource();
+  stopSpeechRecognition();
   isPlaying = false;
   isMyTurn = false;
   hideMyTurnBanner();
-  if (!practiceStarted) {
-    practiceStarted = true;
-    practiceStartTime = Date.now();
-  }
-  playSentence(idx);
+  currentIndex = idx;
+  renderTranscript();
+  updateProgress();
+  updatePlayButton();
+  // Scroll to selected sentence
+  setTimeout(() => sentenceEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
 });
 
 // Speed control
@@ -427,7 +471,7 @@ document.getElementById('guideClose').addEventListener('click', () => guideModal
 guideModal.addEventListener('click', (e) => { if (e.target === guideModal) guideModal.classList.remove('show'); });
 
 // Button events
-prevBtn.addEventListener('click', goPrev);
+audioBtn.addEventListener('click', playCurrentSentenceAudio);
 nextBtn.addEventListener('click', goNext);
 
 // Stats modal

@@ -186,6 +186,13 @@ function resumeRecognition(sentenceText, allMatchedCallback) {
   startSpeechRecognition(sentenceText, allMatchedCallback);
 }
 
+// Resume recognition without resetting matched state (after playing original audio)
+function resumeRecognitionKeepState() {
+  ignoreResults = false;
+  finalTranscript = '';  // clear any audio recognized during playback
+  lastMatchedSpokenIdx = -1;
+}
+
 // Full stop: close mic (only at end of practice or mode switch)
 function stopSpeechRecognition() {
   if (autoContinueTimer) {
@@ -284,10 +291,10 @@ function renderSentenceBlanks() {
   let html = '';
   currentSentenceWords.forEach((word, i) => {
     if (matchedWords[i]) {
-      html += `<span class="word-revealed">${word}</span> `;
+      html += `<span class="word-revealed" data-word="${word}">${word}</span> `;
     } else {
       const display = word.replace(/[a-zA-Z]/g, '_');
-      html += `<span class="word-blank">${display}</span> `;
+      html += `<span class="word-blank" data-word="${word}">${display}</span> `;
     }
   });
   currentEl.innerHTML = html;
@@ -296,7 +303,17 @@ function renderSentenceBlanks() {
 function showFullSentence() {
   const currentEl = document.querySelector('.sentence.current .sentence-text');
   if (!currentEl || !currentSentenceWords.length) return;
-  currentEl.innerHTML = currentSentenceWords.join(' ');
+  // Hint mode: matched words stay green, unmatched words show in orange
+  // Spacing stays identical (each word occupies same space)
+  let html = '';
+  currentSentenceWords.forEach((word, i) => {
+    if (matchedWords[i]) {
+      html += `<span class="word-revealed" data-word="${word}">${word}</span> `;
+    } else {
+      html += `<span class="word-hint" data-word="${word}">${word}</span> `;
+    }
+  });
+  currentEl.innerHTML = html;
 }
 
 function restoreSentenceBlanks() {
@@ -310,9 +327,9 @@ function finalizeSentenceBlanks() {
   let html = '';
   currentSentenceWords.forEach((word, i) => {
     if (matchedWords[i]) {
-      html += `<span class="word-revealed">${word}</span> `;
+      html += `<span class="word-revealed" data-word="${word}">${word}</span> `;
     } else {
-      html += `<span class="word-missed">${word}</span> `;
+      html += `<span class="word-missed" data-word="${word}">${word}</span> `;
     }
   });
   currentEl.innerHTML = html;
@@ -324,3 +341,158 @@ function updateSpeechStatus(listening) {
     el.style.display = listening ? 'inline-flex' : 'none';
   }
 }
+
+// ========== Word TTS + Translation (click any word) ==========
+
+let wordTooltip = null;
+let tooltipWordEl = null;
+let tooltipTranslationEl = null;
+let tooltipTtsBtn = null;
+
+// Translation cache (localStorage)
+const TRANSLATION_CACHE_KEY = 'dp_word_translations';
+function getTranslationCache() {
+  try { return JSON.parse(localStorage.getItem(TRANSLATION_CACHE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function setTranslationCache(word, translation) {
+  try {
+    const cache = getTranslationCache();
+    cache[word.toLowerCase()] = translation;
+    localStorage.setItem(TRANSLATION_CACHE_KEY, JSON.stringify(cache));
+  } catch(e) {}
+}
+
+// Speak a word using browser TTS
+function speakWord(word) {
+  if (!word || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.85;
+  
+  // Pause recognition during TTS playback (avoid recognizing TTS audio)
+  const wasIgnoring = ignoreResults;
+  pauseRecognition();
+  
+  // Resume recognition - with safety timeout in case onend/onerror doesn't fire
+  let resumed = false;
+  const resume = () => {
+    if (resumed) return;
+    resumed = true;
+    if (!wasIgnoring) {
+      ignoreResults = false;
+      finalTranscript = '';
+      lastMatchedSpokenIdx = -1;
+    }
+  };
+  utterance.onend = resume;
+  utterance.onerror = resume;
+  setTimeout(resume, 5000);  // force resume after 5s max
+  
+  window.speechSynthesis.speak(utterance);
+}
+
+// Translate a word using Google Translate free endpoint
+async function translateWord(word) {
+  const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
+  if (!cleanWord) return '';
+  
+  // Check cache first
+  const cache = getTranslationCache();
+  if (cache[cleanWord]) return cache[cleanWord];
+  
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${encodeURIComponent(cleanWord)}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    const translation = data && data[0] && data[0][0] && data[0][0][0] ? data[0][0][0] : '';
+    if (translation) {
+      setTranslationCache(cleanWord, translation);
+    }
+    return translation || '翻译不可用';
+  } catch(e) {
+    console.warn('Translation failed:', e);
+    return '翻译不可用';
+  }
+}
+
+// Show word tooltip near click position
+function showWordTooltip(word, clickX, clickY) {
+  if (!wordTooltip) {
+    wordTooltip = document.getElementById('wordTooltip');
+    tooltipWordEl = document.getElementById('tooltipWord');
+    tooltipTranslationEl = document.getElementById('tooltipTranslation');
+    tooltipTtsBtn = document.getElementById('tooltipTtsBtn');
+    
+    tooltipTtsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      speakWord(tooltipWordEl.textContent);
+    });
+  }
+  
+  tooltipWordEl.textContent = word;
+  tooltipTranslationEl.textContent = '加载中...';
+  wordTooltip.style.display = 'block';
+  
+  // Position tooltip after browser reflow (requestAnimationFrame ensures correct positioning)
+  requestAnimationFrame(() => {
+    let left = clickX;
+    left = Math.max(120, Math.min(left, window.innerWidth - 120));
+    let top = clickY - 100;
+    if (top < 10) top = clickY + 30;
+    
+    wordTooltip.style.left = left + 'px';
+    wordTooltip.style.top = top + 'px';
+  });
+  
+  // Fetch translation
+  translateWord(word).then(translation => {
+    if (tooltipWordEl.textContent === word) {
+      tooltipTranslationEl.textContent = translation;
+    }
+  });
+}
+
+function hideWordTooltip() {
+  if (wordTooltip) {
+    wordTooltip.style.display = 'none';
+  }
+}
+
+// Click delegation: detect clicks on word spans (ONLY within current sentence)
+// Bound to transcriptEl (registered before app.js's paragraph jump listener)
+// so we can stopPropagation and prevent resetting matched state.
+const transcriptElForWords = document.getElementById('transcript');
+if (transcriptElForWords) {
+  transcriptElForWords.addEventListener('click', (e) => {
+    // Only trigger word lookup within the CURRENT sentence
+    // Clicking words in other sentences lets event bubble to select that paragraph
+    const wordSpan = e.target.closest('.sentence.current .sentence-text span');
+    if (wordSpan) {
+      e.stopImmediatePropagation();  // prevent paragraph jump listener on same element
+      // Prefer data-word attribute (works for blank lines too), fallback to textContent
+      const word = (wordSpan.dataset.word || wordSpan.textContent || '').trim();
+      if (word && !/^_+$/.test(word)) {
+        const rect = wordSpan.getBoundingClientRect();
+        showWordTooltip(word, rect.left + rect.width / 2, rect.top);
+        // Auto-speak the word
+        speakWord(word);
+      }
+    }
+  });
+}
+
+// Click elsewhere on page: hide tooltip
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.word-tooltip') && !e.target.closest('.sentence.current .sentence-text span')) {
+    hideWordTooltip();
+  }
+});
+
+// Stop TTS when page hidden
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+});

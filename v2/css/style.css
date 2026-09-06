@@ -152,6 +152,34 @@ body {
 }
 .word-revealed { color: #1a7a5c; border-bottom-color: transparent; font-weight: 600; }
 .word-missed { color: #e74c3c; border-bottom-color: #e74c3c; text-decoration: line-through; }
+/* Hint mode: show unmatched words in orange, same spacing */
+.word-hint { color: #e67e22; border-bottom: 2px solid #f5cba7; font-weight: 500; }
+/* All words are clickable for TTS + translation */
+.sentence-text span { cursor: pointer; -webkit-user-select: none; user-select: none; }
+.sentence-text span:active { opacity: 0.7; }
+
+/* Word tooltip */
+.word-tooltip {
+  position: fixed; z-index: 500; background: white;
+  border-radius: 12px; padding: 12px 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  max-width: 250px; text-align: center;
+  border: 1px solid #eee;
+  transform: translateX(-50%);  /* center horizontally on the word */
+}
+.word-tooltip::after {
+  content: ''; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); border-width: 8px 8px 0;
+  border-style: solid; border-color: white transparent transparent;
+}
+.tooltip-word { font-size: 18px; font-weight: 700; color: #2c3e50; margin-bottom: 4px; }
+.tooltip-translation { font-size: 15px; color: #1a7a5c; margin-bottom: 8px; min-height: 20px; }
+.tooltip-tts-btn {
+  background: #3498db; color: white; border: none;
+  padding: 6px 16px; border-radius: 8px; font-size: 13px;
+  font-weight: 600; cursor: pointer;
+}
+.tooltip-tts-btn:active { background: #2980b9; }
 
 /* Bottom dock */
 .dock {

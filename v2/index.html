@@ -60,8 +60,8 @@
     <span class="speech-status" id="speechStatus" style="margin-left:8px"><span class="speech-dot"></span>识别中</span>
   </div>
   <div class="dock-buttons">
-    <button class="dock-btn btn-secondary" id="prevBtn">
-      <span class="btn-icon">⏮</span><span>上一句</span>
+    <button class="dock-btn btn-secondary" id="audioBtn">
+      <span class="btn-icon">🔊</span><span>原音</span>
     </button>
     <button class="dock-btn btn-primary" id="playBtn">
       <span class="btn-icon">▶</span><span>开始练习</span>
@@ -80,7 +80,9 @@
       <li><b>选角色</b>：选 A / B / C 扮演，或选「通读」全程自动播放。</li>
       <li><b>选模式</b>：朗读模式看着读；背诵模式台词变横线，读对的词逐个亮出来，全对自动继续。</li>
       <li><b>开始</b>：点底部 ▶ 开始，轮到你时底部红条闪烁。</li>
-      <li><b>背诵提示</b>：背诵模式下按住「💡提示」可看全文，松开恢复（已识别的词不消失）。</li>
+      <li><b>背诵提示</b>：背诵模式下按住「💡提示」，<span style="color:#e67e22">橙色</span>是没读对的词，<span style="color:#1a7a5c">绿色</span>是已读对的，松开恢复横线。</li>
+      <li><b>🔊 原音</b>：点左下角原音按钮，播放当前句子的标准发音（背诵时可参考）。</li>
+      <li><b>点单词查词</b>：点任意英文单词，弹出中文翻译和 🔊 读音（像查字典一样）。</li>
       <li><b>中文翻译</b>：点「🌐翻译」开关，每句英文下面显示中文。</li>
       <li><b>操作</b>：点任意台词可跳转；空格=播放/暂停，←→=上一句/下一句。</li>
     </ol>
@@ -132,5 +134,12 @@ window.addEventListener('load', function() {
   }
 });
 </script>
+<!-- Word tooltip for TTS + translation -->
+<div class="word-tooltip" id="wordTooltip" style="display:none">
+  <div class="tooltip-word" id="tooltipWord"></div>
+  <div class="tooltip-translation" id="tooltipTranslation">加载中...</div>
+  <button class="tooltip-tts-btn" id="tooltipTtsBtn">🔊 读音</button>
+</div>
+
 </body>
 </html>
