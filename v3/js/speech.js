@@ -291,10 +291,10 @@ function renderSentenceBlanks() {
   let html = '';
   currentSentenceWords.forEach((word, i) => {
     if (matchedWords[i]) {
-      html += `<span class="word-revealed">${word}</span> `;
+      html += `<span class="word-revealed" data-word="${word}">${word}</span> `;
     } else {
       const display = word.replace(/[a-zA-Z]/g, '_');
-      html += `<span class="word-blank">${display}</span> `;
+      html += `<span class="word-blank" data-word="${word}">${display}</span> `;
     }
   });
   currentEl.innerHTML = html;
@@ -308,9 +308,9 @@ function showFullSentence() {
   let html = '';
   currentSentenceWords.forEach((word, i) => {
     if (matchedWords[i]) {
-      html += `<span class="word-revealed">${word}</span> `;
+      html += `<span class="word-revealed" data-word="${word}">${word}</span> `;
     } else {
-      html += `<span class="word-hint">${word}</span> `;
+      html += `<span class="word-hint" data-word="${word}">${word}</span> `;
     }
   });
   currentEl.innerHTML = html;
@@ -327,9 +327,9 @@ function finalizeSentenceBlanks() {
   let html = '';
   currentSentenceWords.forEach((word, i) => {
     if (matchedWords[i]) {
-      html += `<span class="word-revealed">${word}</span> `;
+      html += `<span class="word-revealed" data-word="${word}">${word}</span> `;
     } else {
-      html += `<span class="word-missed">${word}</span> `;
+      html += `<span class="word-missed" data-word="${word}">${word}</span> `;
     }
   });
   currentEl.innerHTML = html;
@@ -444,8 +444,9 @@ document.addEventListener('click', (e) => {
   const wordSpan = e.target.closest('.sentence-text span');
   if (wordSpan) {
     e.stopPropagation();
-    const word = wordSpan.textContent.trim();
-    if (word && word !== '_' && !/^_+$/.test(word)) {
+    // Prefer data-word attribute (works for blank lines too), fallback to textContent
+    const word = (wordSpan.dataset.word || wordSpan.textContent || '').trim();
+    if (word && !/^_+$/.test(word)) {
       const rect = wordSpan.getBoundingClientRect();
       showWordTooltip(word, rect.left + rect.width / 2, rect.top);
       // Auto-speak the word

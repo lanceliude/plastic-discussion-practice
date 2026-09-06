@@ -121,6 +121,11 @@ translateBtn.addEventListener('click', () => {
 });
 
 // Render transcript
+// Wrap each word in a span with data-word attribute (for click-to-translate in all modes)
+function wrapWords(text) {
+  return text.replace(/([a-zA-Z]+(?:[''-][a-zA-Z]+)*)/g, '<span data-word="$1">$1</span>');
+}
+
 function renderTranscript() {
   transcriptEl.innerHTML = '';
   dialogues.forEach((d, i) => {
@@ -146,7 +151,7 @@ function renderTranscript() {
         <span class="role-tag role-${roleShort}">${d.role}${mine ? '<span class="my-badge">你</span>' : ''}</span>
         <span class="sentence-num">${i+1}/${TOTAL}</span>
       </div>
-      <div class="sentence-text">${textContent}</div>
+      <div class="sentence-text">${wrapWords(textContent)}</div>
       <div class="sentence-zh">${d.zh}</div>
     `;
     transcriptEl.appendChild(div);
