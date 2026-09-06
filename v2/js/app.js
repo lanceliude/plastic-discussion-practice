@@ -193,7 +193,7 @@ function playSentence(index) {
     updatePlayButton();
     
     if (practiceMode === 'recite' && speechSupported && speechEnabled) {
-      setTimeout(() => startSpeechRecognition(d.text, onAllWordsMatched), 300);
+      startSpeechRecognition(d.text, onAllWordsMatched);
     }
   } else {
     isMyTurn = false;

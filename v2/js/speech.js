@@ -13,13 +13,21 @@ let onAllMatched = null;
 let autoContinueTimer = null;
 let lastMatchedSpokenIdx = -1;  // ensures sequential matching, no look-ahead leaks
 
+// Detect iOS Safari (has different SpeechRecognition behavior)
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const isIOSSafari = isIOS && isSafari;
+
 // Detect support
 (function initSpeechDetection() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR) {
     speechSupported = true;
     recognition = new SR();
-    recognition.continuous = true;
+    // iOS Safari: use continuous=false (continuous mode has compatibility issues on iOS Safari)
+    // Auto-restart on end handles the "always listening" behavior
+    recognition.continuous = !isIOSSafari;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
@@ -63,8 +71,21 @@ function handleRecognitionError(event) {
   if (event.error === 'not-allowed') {
     speechEnabled = false;
     recognitionActive = false;
-    alert('麦克风权限被拒绝，语音识别已关闭。');
+    alert('麦克风权限被拒绝。\n\n请在：设置 > Safari > 麦克风 中允许此网站使用麦克风，然后刷新页面。');
+  } else if (event.error === 'service-not-allowed') {
+    speechEnabled = false;
+    recognitionActive = false;
+    alert('语音识别服务不可用。\n\niOS Safari 的语音识别需要网络连接。如果问题持续，建议使用 Chrome 浏览器。');
+  } else if (event.error === 'language-not-supported') {
+    speechEnabled = false;
+    recognitionActive = false;
+    alert('当前浏览器不支持英语语音识别。建议使用 Chrome 浏览器。');
+  } else if (event.error === 'audio-capture') {
+    speechEnabled = false;
+    recognitionActive = false;
+    alert('无法访问麦克风。请检查设备是否有麦克风，以及 Safari 是否有麦克风权限。');
   }
+  // 'no-speech' and 'aborted' are normal, auto-restart will handle
 }
 
 // Page visibility: stop mic when hidden, restart when visible if in recite mode
@@ -140,8 +161,11 @@ function startSpeechRecognition(sentenceText, allMatchedCallback) {
       recognition.start();
       isListening = true;
       updateSpeechStatus(true);
+      console.log('Speech recognition started (iOS Safari:', isIOSSafari, ', continuous:', recognition.continuous, ')');
     } catch(e) {
       console.warn('Recognition start failed:', e);
+      recognitionActive = false;
+      // Don't alert here - onerror handler will show specific error
     }
   }
   // If already active, mic stays open - no prompt sound, just reset matching
