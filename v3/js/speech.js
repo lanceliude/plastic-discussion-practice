@@ -415,10 +415,9 @@ function showWordTooltip(word, clickX, clickY) {
   tooltipTranslationEl.textContent = '加载中...';
   wordTooltip.style.display = 'block';
   
-  // Position tooltip above the clicked word
-  const tooltipWidth = 200;
-  let left = clickX - tooltipWidth / 2;
-  left = Math.max(10, Math.min(left, window.innerWidth - tooltipWidth - 10));
+  // Position tooltip above the clicked word (transform: translateX(-50%) handles centering)
+  let left = clickX;
+  left = Math.max(120, Math.min(left, window.innerWidth - 120));
   let top = clickY - 100;
   if (top < 10) top = clickY + 30;
   
@@ -439,9 +438,11 @@ function hideWordTooltip() {
   }
 }
 
-// Click delegation: detect clicks on word spans
+// Click delegation: detect clicks on word spans (ONLY within current sentence)
 document.addEventListener('click', (e) => {
-  const wordSpan = e.target.closest('.sentence-text span');
+  // Only trigger word lookup within the CURRENT sentence
+  // Clicking words in other sentences selects that sentence (handled by app.js)
+  const wordSpan = e.target.closest('.sentence.current .sentence-text span');
   if (wordSpan) {
     e.stopPropagation();
     // Prefer data-word attribute (works for blank lines too), fallback to textContent
@@ -454,7 +455,7 @@ document.addEventListener('click', (e) => {
     }
     return;
   }
-  // Click elsewhere: hide tooltip
+  // Click elsewhere (including other sentences): hide tooltip
   hideWordTooltip();
 });
 
