@@ -252,3 +252,21 @@ body {
   animation: blink 1s infinite;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Group practice mode: single full-width button, no side buttons */
+body.group-mode #audioBtn,
+body.group-mode #nextBtn { display: none; }
+body.group-mode #playBtn { flex: 1; }
+body.group-mode .dock-buttons { gap: 0; }
+
+/* Group mode: per-role progress summary bar */
+.group-role-summary {
+  display: flex; justify-content: space-around; padding: 8px 12px;
+  background: #f0f4f8; border-radius: 8px; margin: 8px 12px; font-size: 12px;
+}
+.group-role-item { text-align: center; }
+.group-role-item .role-name { font-weight: 700; margin-bottom: 2px; }
+.group-role-item .role-pct { font-size: 16px; font-weight: 800; }
+.group-role-item.role-A .role-name, .group-role-item.role-A .role-pct { color: #e74c3c; }
+.group-role-item.role-B .role-name, .group-role-item.role-B .role-pct { color: #3498db; }
+.group-role-item.role-C .role-name, .group-role-item.role-C .role-pct { color: #f39c12; }

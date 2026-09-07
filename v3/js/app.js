@@ -217,6 +217,32 @@ function refreshGroupDisplay() {
       textEl.innerHTML = wordsHtml;
     }
   });
+  
+  // Update per-role real-time progress
+  updateGroupRoleProgress();
+}
+
+function updateGroupRoleProgress() {
+  const summary = document.getElementById('groupRoleSummary');
+  if (!summary) return;
+  if (!isGroupMode) { summary.style.display = 'none'; return; }
+  summary.style.display = 'flex';
+  
+  const roleStats = { 'Student A': { matched: 0, total: 0 }, 'Student B': { matched: 0, total: 0 }, 'Student C': { matched: 0, total: 0 } };
+  dialogues.forEach((d, i) => {
+    const role = d.role;
+    if (!roleStats[role]) roleStats[role] = { matched: 0, total: 0 };
+    const words = d.text.split(/\s+/).filter(w => w.length > 0);
+    roleStats[role].total += words.length;
+    roleStats[role].matched += groupMatchedWords[i] ? groupMatchedWords[i].filter(Boolean).length : 0;
+  });
+  
+  for (const [role, stats] of Object.entries(roleStats)) {
+    const pct = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
+    const suffix = role.replace('Student ', '');
+    const el = document.getElementById('groupPct' + suffix);
+    if (el) el.textContent = pct + '%';
+  }
 }
 
 function finishGroupPractice() {
@@ -301,6 +327,9 @@ function loadSettings() {
   isGroupMode = (selectedRole === 'GROUP');
   if (isGroupMode) {
     groupWordList = buildGroupWordList();
+    document.body.classList.add('group-mode');
+  } else {
+    document.body.classList.remove('group-mode');
   }
   
   updateRoleSegUI();
@@ -436,6 +465,7 @@ function renderTranscript() {
     if (currentEl) {
       setTimeout(() => currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
     }
+    updateGroupRoleProgress();
     return;
   }
   
@@ -602,16 +632,6 @@ function updatePlayButton() {
       icon.textContent = '🎙️';
       label.textContent = '开始合练';
     }
-    // Audio button: play original audio of selected sentence
-    const audioIcon = audioBtn.querySelector('.btn-icon');
-    const audioLabel = audioBtn.querySelector('span:last-child');
-    audioIcon.textContent = '🔊';
-    audioLabel.textContent = '听原音';
-    // Next button: reset group practice
-    const nextIcon = nextBtn.querySelector('.btn-icon');
-    const nextLabel = nextBtn.querySelector('span:last-child');
-    nextIcon.textContent = '🔄';
-    nextLabel.textContent = '重置';
     return;
   }
   
@@ -827,94 +847,7 @@ function restartPractice() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// === Group Practice: long press to reset from sentence ===
-let groupPressTimer = null;
-let groupPressSentence = -1;
-
-function resetGroupFromSentence(idx) {
-  if (!isGroupMode) return;
-  // Clear all matches from this sentence onwards
-  for (let i = idx; i < dialogues.length; i++) {
-    if (groupMatchedWords[i]) {
-      groupMatchedWords[i].fill(false);
-    }
-  }
-  // Recalculate matched count
-  groupMatchedCount = 0;
-  for (let i = 0; i < idx; i++) {
-    if (groupMatchedWords[i]) {
-      groupMatchedCount += groupMatchedWords[i].filter(Boolean).length;
-    }
-  }
-  // Reset last matched position to the word before this sentence
-  groupLastMatchedPos = -1;
-  for (let i = 0; i < idx; i++) {
-    const words = dialogues[i].text.split(/\s+/).filter(w => w.length > 0);
-    groupLastMatchedPos += words.length;
-  }
-  // Clear final transcript to avoid old matches
-  groupFinalTranscript = '';
-  groupSelectedSentence = idx;
-  renderTranscript();
-  updateProgress();
-  // Show brief feedback
-  const bar = document.getElementById('myTurnBar');
-  if (bar) {
-    const text = document.getElementById('myTurnText');
-    if (text) text.textContent = '✅ 已从第 ' + (idx+1) + ' 句重新开始';
-    bar.classList.add('show');
-    setTimeout(() => {
-      if (groupRecognitionActive) {
-        if (text) text.textContent = '🎙️ 合练中 - 正在识别';
-      } else {
-        bar.classList.remove('show');
-      }
-    }, 1500);
-  }
-}
-
-transcriptEl.addEventListener('mousedown', (e) => {
-  if (!isGroupMode) return;
-  const sentenceEl = e.target.closest('.sentence');
-  if (!sentenceEl) return;
-  const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
-  if (idx === -1) return;
-  groupPressSentence = idx;
-  groupPressTimer = setTimeout(() => {
-    resetGroupFromSentence(idx);
-    groupPressSentence = -1;
-  }, 600);
-});
-
-transcriptEl.addEventListener('mouseup', () => {
-  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
-});
-
-transcriptEl.addEventListener('mouseleave', () => {
-  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
-});
-
-// Touch events for mobile
-transcriptEl.addEventListener('touchstart', (e) => {
-  if (!isGroupMode) return;
-  const sentenceEl = e.target.closest('.sentence');
-  if (!sentenceEl) return;
-  const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
-  if (idx === -1) return;
-  groupPressSentence = idx;
-  groupPressTimer = setTimeout(() => {
-    resetGroupFromSentence(idx);
-    groupPressSentence = -1;
-  }, 600);
-}, { passive: true });
-
-transcriptEl.addEventListener('touchend', () => {
-  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
-});
-
-transcriptEl.addEventListener('touchcancel', () => {
-  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
-});
+// === Group Practice: long press removed (fully automatic, no manual操作) ===
 
 // Click any sentence to jump
 transcriptEl.addEventListener('click', (e) => {
@@ -923,16 +856,8 @@ transcriptEl.addEventListener('click', (e) => {
   const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
   if (idx === -1 || idx >= TOTAL) return;
   
-  // === Group Practice Mode: just select, don't stop recognition ===
-  if (isGroupMode) {
-    groupSelectedSentence = idx;
-    // Update highlight without full re-render (preserves scroll and recognition state)
-    transcriptEl.querySelectorAll('.sentence').forEach((el, i) => {
-      el.classList.toggle('current', i === idx);
-    });
-    setTimeout(() => sentenceEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
-    return;
-  }
+  // === Group Practice Mode: do nothing (fully automatic) ===
+  if (isGroupMode) return;
   
   // === Normal Mode: select and stop playback ===
   // Only select the sentence, don't auto-play (user must press play button)
