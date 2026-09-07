@@ -12,6 +12,228 @@ let showTranslation = false;
 let isHintPressed = false;
 let isLooping = false;  // loop playback of current sentence
 
+// === Group Practice Mode (合练模式) ===
+let isGroupMode = false;
+let groupMatchedWords = [];  // 2D array: [sentenceIdx][wordIdx] = true/false
+let groupLastMatchedPos = -1;  // last matched position in flat word list
+let groupTotalWords = 0;
+let groupMatchedCount = 0;
+let groupRecognitionActive = false;
+let groupSelectedSentence = 0;  // currently selected/highlighted sentence for hint
+
+// Build flat word list from all dialogues for group mode matching
+function buildGroupWordList() {
+  const flat = [];
+  groupMatchedWords = [];
+  dialogues.forEach((d, sIdx) => {
+    const words = d.text.split(/\s+/).filter(w => w.length > 0);
+    groupMatchedWords.push(new Array(words.length).fill(false));
+    words.forEach((w, wIdx) => {
+      flat.push({ sentence: sIdx, word: w, wordIdx: wIdx, clean: w.toLowerCase().replace(/[^a-z]/g, '') });
+    });
+  });
+  groupTotalWords = flat.length;
+  groupMatchedCount = 0;
+  groupLastMatchedPos = -1;
+  return flat;
+}
+let groupWordList = [];
+
+// === Group Practice: Speech Recognition Matching ===
+let groupFinalTranscript = '';
+let groupOrigOnResult = null;
+let groupOrigOnEnd = null;
+
+function groupMatchWords(transcript) {
+  if (!groupWordList.length) return;
+  const spokenWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  if (!spokenWords.length) return;
+  
+  let changed = false;
+  let searchStart = groupLastMatchedPos + 1;
+  // Allow looking back a bit for re-matching (in case of overlap)
+  if (searchStart > 0) searchStart = Math.max(0, searchStart - 3);
+  
+  for (let sp = 0; sp < spokenWords.length; sp++) {
+    const spoken = spokenWords[sp].replace(/[^a-z]/g, '');
+    if (!spoken) continue;
+    
+    // Search forward from searchStart
+    let found = -1;
+    for (let gp = searchStart; gp < groupWordList.length && gp < searchStart + 15; gp++) {
+      if (groupMatchedWords[groupWordList[gp].sentence][groupWordList[gp].wordIdx]) continue;
+      const target = groupWordList[gp].clean;
+      if (!target) continue;
+      // Exact match or fuzzy match (startsWith for short words)
+      if (target === spoken || (target.length > 4 && target.startsWith(spoken)) || (spoken.length > 4 && spoken.startsWith(target))) {
+        found = gp;
+        break;
+      }
+    }
+    
+    if (found >= 0) {
+      const item = groupWordList[found];
+      groupMatchedWords[item.sentence][item.wordIdx] = true;
+      groupMatchedCount++;
+      groupLastMatchedPos = found;
+      searchStart = found + 1;
+      changed = true;
+    }
+  }
+  
+  if (changed) {
+    updateProgress();
+    // Update only the changed sentences' display for performance
+    refreshGroupDisplay();
+    // Check if all words matched
+    if (groupMatchedCount >= groupTotalWords) {
+      setTimeout(() => finishGroupPractice(), 1000);
+    }
+  }
+}
+
+function groupOnResult(event) {
+  let interim = '';
+  let final = '';
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    const transcript = event.results[i][0].transcript;
+    if (event.results[i].isFinal) {
+      final += transcript + ' ';
+    } else {
+      interim += transcript;
+    }
+  }
+  if (final) groupFinalTranscript += final;
+  const combined = (groupFinalTranscript + ' ' + interim).trim();
+  if (combined) {
+    groupMatchWords(combined);
+  }
+}
+
+function groupOnEnd() {
+  isListening = false;
+  if (groupRecognitionActive && !document.hidden && speechSupported) {
+    try { recognition.start(); isListening = true; } catch(e) {}
+  }
+  updateSpeechStatus(isListening);
+}
+
+function startGroupRecognition() {
+  if (!speechSupported) {
+    alert('当前浏览器不支持语音识别。建议使用 Chrome 或 Safari 浏览器。');
+    return;
+  }
+  groupFinalTranscript = '';
+  groupRecognitionActive = true;
+  
+  // Save original handlers and replace with group mode handlers
+  groupOrigOnResult = recognition.onresult;
+  groupOrigOnEnd = recognition.onend;
+  recognition.onresult = groupOnResult;
+  recognition.onend = groupOnEnd;
+  ignoreResults = false;
+  
+  try {
+    recognition.start();
+    isListening = true;
+    updateSpeechStatus(true);
+  } catch(e) {
+    console.warn('Group recognition start failed:', e);
+  }
+  
+  // Show my-turn bar as "listening" indicator
+  myTurnText.textContent = '🎙️ 合练中 - 正在识别';
+  myTurnBar.classList.add('show');
+}
+
+function stopGroupRecognition() {
+  groupRecognitionActive = false;
+  try { recognition.stop(); } catch(e) {}
+  isListening = false;
+  updateSpeechStatus(false);
+  
+  // Restore original handlers
+  if (groupOrigOnResult) recognition.onresult = groupOrigOnResult;
+  if (groupOrigOnEnd) recognition.onend = groupOrigOnEnd;
+  groupOrigOnResult = null;
+  groupOrigOnEnd = null;
+  
+  myTurnBar.classList.remove('show');
+}
+
+function refreshGroupDisplay() {
+  // Update all sentences' word display without full re-render (preserves scroll)
+  const sentenceEls = transcriptEl.querySelectorAll('.sentence');
+  sentenceEls.forEach((div, i) => {
+    if (i >= dialogues.length) return;
+    const d = dialogues[i];
+    const words = d.text.split(/\s+/).filter(w => w.length > 0);
+    const matchedCount = groupMatchedWords[i] ? groupMatchedWords[i].filter(Boolean).length : 0;
+    const totalCount = words.length;
+    const pct = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
+    
+    // Update meta
+    const meta = div.querySelector('.sentence-num');
+    if (meta) meta.textContent = `${matchedCount}/${totalCount} · ${pct}%`;
+    
+    // Update words
+    const textEl = div.querySelector('.sentence-text');
+    if (textEl) {
+      let wordsHtml = '';
+      words.forEach((w, wIdx) => {
+        const isMatched = groupMatchedWords[i] && groupMatchedWords[i][wIdx];
+        if (isMatched) {
+          wordsHtml += `<span data-word="${w}" class="word-matched">${w}</span> `;
+        } else {
+          const blankLen = Math.max(3, w.replace(/[^a-zA-Z]/g, '').length);
+          wordsHtml += `<span data-word="${w}" class="word-blank">${'_'.repeat(blankLen)}</span> `;
+        }
+      });
+      textEl.innerHTML = wordsHtml;
+    }
+  });
+}
+
+function finishGroupPractice() {
+  stopGroupRecognition();
+  practiceStarted = false;
+  updatePlayButton();
+  
+  // Calculate per-role stats
+  const roleStats = {};
+  dialogues.forEach((d, i) => {
+    const role = d.role;
+    if (!roleStats[role]) roleStats[role] = { matched: 0, total: 0 };
+    const words = d.text.split(/\s+/).filter(w => w.length > 0);
+    roleStats[role].total += words.length;
+    roleStats[role].matched += groupMatchedWords[i] ? groupMatchedWords[i].filter(Boolean).length : 0;
+  });
+  
+  let roleHtml = '';
+  for (const [role, stats] of Object.entries(roleStats)) {
+    const pct = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
+    const color = role === 'Student A' ? '#e74c3c' : (role === 'Student B' ? '#3498db' : '#f39c12');
+    roleHtml += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;">
+      <span style="color:${color};font-weight:600;">${role}</span>
+      <span>${stats.matched}/${stats.total} 词 · ${pct}%</span>
+    </div>`;
+  }
+  
+  const totalPct = groupTotalWords > 0 ? Math.round((groupMatchedCount / groupTotalWords) * 100) : 0;
+  const elapsed = practiceStartTime ? Math.floor((Date.now() - practiceStartTime) / 1000) : 0;
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  
+  document.getElementById('statTotal').textContent = groupTotalWords;
+  document.getElementById('statMine').textContent = groupMatchedCount;
+  document.getElementById('statTime').textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+  document.getElementById('statRole').textContent = '合练模式';
+  document.getElementById('statsNote').innerHTML = `总说对率：${totalPct}%<br><br><b>各角色完成度：</b><br>${roleHtml}`;
+  
+  statsModal.classList.add('show');
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+}
+
 // DOM elements
 const transcriptEl = document.getElementById('transcript');
 const speedRange = document.getElementById('speedRange');
@@ -31,6 +253,7 @@ const myTurnText = document.getElementById('myTurnText');
 const translateBtn = document.getElementById('translateBtn');
 
 function isMySentence(d) {
+  if (isGroupMode) return false;
   return selectedRole !== 'ALL' && d.role === selectedRole;
 }
 
@@ -49,6 +272,12 @@ function loadSettings() {
     // speechEnabled is now fully automatic (on in recite mode + my turn, off otherwise)
     speechEnabled = true;
   } catch(e) {}
+  
+  isGroupMode = (selectedRole === 'GROUP');
+  if (isGroupMode) {
+    groupWordList = buildGroupWordList();
+  }
+  
   updateRoleSegUI();
   updateModeSegUI();
 }
@@ -61,9 +290,9 @@ function updateRoleSegUI() {
   const btns = roleSeg.querySelectorAll('.seg-btn');
   btns.forEach(btn => {
     const r = btn.dataset.role;
-    btn.classList.remove('active-A', 'active-B', 'active-C', 'active-ALL');
+    btn.classList.remove('active-A', 'active-B', 'active-C', 'active-ALL', 'active-GROUP');
     if (r === selectedRole) {
-      const suffix = r === 'ALL' ? 'ALL' : r.replace('Student ', '');
+      const suffix = r === 'ALL' ? 'ALL' : (r === 'GROUP' ? 'GROUP' : r.replace('Student ', ''));
       btn.classList.add('active-' + suffix);
     }
   });
@@ -73,15 +302,27 @@ roleSeg.addEventListener('click', (e) => {
   const btn = e.target.closest('.seg-btn');
   if (!btn) return;
   selectedRole = btn.dataset.role;
+  isGroupMode = (selectedRole === 'GROUP');
   saveRole(selectedRole);
   updateRoleSegUI();
+  
+  // Reset state when switching modes
+  stopCurrentSource();
+  stopSpeechRecognition();
+  isPlaying = false;
+  isLooping = false;
+  isMyTurn = false;
+  hideMyTurnBanner();
+  practiceStarted = false;
+  currentIndex = 0;
+  
+  if (isGroupMode) {
+    groupWordList = buildGroupWordList();
+  }
+  
   renderTranscript();
-  if (selectedRole === 'ALL') {
-    stopSpeechRecognition();  // close mic in read-through mode
-  }
-  if (isMyTurn && (selectedRole === 'ALL' || !isMySentence(dialogues[currentIndex]))) {
-    myTurnDone();
-  }
+  updateProgress();
+  updatePlayButton();
 });
 
 // Practice mode (read/recite)
@@ -129,6 +370,51 @@ function wrapWords(text) {
 
 function renderTranscript() {
   transcriptEl.innerHTML = '';
+  
+  // === Group Practice Mode ===
+  if (isGroupMode) {
+    dialogues.forEach((d, i) => {
+      const div = document.createElement('div');
+      div.className = 'sentence';
+      if (i === groupSelectedSentence) div.classList.add('current');
+      
+      const roleShort = d.role.replace('Student ', '');
+      const words = d.text.split(/\s+/).filter(w => w.length > 0);
+      const matchedCount = groupMatchedWords[i] ? groupMatchedWords[i].filter(Boolean).length : 0;
+      const totalCount = words.length;
+      const pct = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
+      
+      // Build word HTML: matched = green, unmatched = blank line
+      let wordsHtml = '';
+      words.forEach((w, wIdx) => {
+        const isMatched = groupMatchedWords[i] && groupMatchedWords[i][wIdx];
+        if (isMatched) {
+          wordsHtml += `<span data-word="${w}" class="word-matched">${w}</span> `;
+        } else {
+          const blankLen = Math.max(3, w.replace(/[^a-zA-Z]/g, '').length);
+          wordsHtml += `<span data-word="${w}" class="word-blank">${'_'.repeat(blankLen)}</span> `;
+        }
+      });
+      
+      div.innerHTML = `
+        <div class="sentence-meta">
+          <span class="role-tag role-${roleShort}">${d.role}</span>
+          <span class="sentence-num">${matchedCount}/${totalCount} · ${pct}%</span>
+        </div>
+        <div class="sentence-text">${wordsHtml}</div>
+        <div class="sentence-zh">${d.zh}</div>
+      `;
+      transcriptEl.appendChild(div);
+    });
+    
+    const currentEl = transcriptEl.querySelector('.sentence.current');
+    if (currentEl) {
+      setTimeout(() => currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
+    return;
+  }
+  
+  // === Normal Mode ===
   dialogues.forEach((d, i) => {
     const div = document.createElement('div');
     div.className = 'sentence';
@@ -170,6 +456,13 @@ function renderTranscript() {
 }
 
 function updateProgress() {
+  if (isGroupMode) {
+    const pct = groupTotalWords > 0 ? Math.round((groupMatchedCount / groupTotalWords) * 100) : 0;
+    progressText.textContent = `已说对 ${groupMatchedCount} / ${groupTotalWords} 词`;
+    progressPercent.textContent = pct + '%';
+    progressFill.style.width = pct + '%';
+    return;
+  }
   const pct = Math.round((currentIndex / TOTAL) * 100);
   progressText.textContent = `第 ${Math.min(currentIndex+1, TOTAL)} / ${TOTAL} 句`;
   progressPercent.textContent = pct + '%';
@@ -223,6 +516,26 @@ function hideMyTurnBanner() {
 }
 
 function togglePlay() {
+  // === Group Practice Mode ===
+  if (isGroupMode) {
+    if (groupRecognitionActive) {
+      // Stop group practice
+      finishGroupPractice();
+    } else {
+      // Start group practice: reset and begin recognition
+      groupWordList = buildGroupWordList();
+      groupFinalTranscript = '';
+      practiceStarted = true;
+      practiceStartTime = Date.now();
+      renderTranscript();
+      updateProgress();
+      startGroupRecognition();
+    }
+    updatePlayButton();
+    return;
+  }
+  
+  // === Normal Mode ===
   if (isMyTurn) {
     if (practiceMode === 'recite') {
       // Hint button behavior: press and hold handled by touch/mouse events
@@ -254,6 +567,30 @@ function updatePlayButton() {
   const icon = playBtn.querySelector('.btn-icon');
   const label = playBtn.querySelector('span:last-child');
   playBtn.classList.remove('my-turn-mode');
+  
+  // === Group Practice Mode ===
+  if (isGroupMode) {
+    if (groupRecognitionActive) {
+      icon.textContent = '⏹';
+      label.textContent = '结束合练';
+    } else {
+      icon.textContent = '🎙️';
+      label.textContent = '开始合练';
+    }
+    // Audio button: play original audio of selected sentence
+    const audioIcon = audioBtn.querySelector('.btn-icon');
+    const audioLabel = audioBtn.querySelector('span:last-child');
+    audioIcon.textContent = '🔊';
+    audioLabel.textContent = '听原音';
+    // Next button: reset group practice
+    const nextIcon = nextBtn.querySelector('.btn-icon');
+    const nextLabel = nextBtn.querySelector('span:last-child');
+    nextIcon.textContent = '🔄';
+    nextLabel.textContent = '重置';
+    return;
+  }
+  
+  // === Normal Mode ===
   if (isMyTurn) {
     if (practiceMode === 'recite') {
       icon.textContent = '💡';
@@ -471,6 +808,19 @@ transcriptEl.addEventListener('click', (e) => {
   if (!sentenceEl) return;
   const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
   if (idx === -1 || idx >= TOTAL) return;
+  
+  // === Group Practice Mode: just select, don't stop recognition ===
+  if (isGroupMode) {
+    groupSelectedSentence = idx;
+    // Update highlight without full re-render (preserves scroll and recognition state)
+    transcriptEl.querySelectorAll('.sentence').forEach((el, i) => {
+      el.classList.toggle('current', i === idx);
+    });
+    setTimeout(() => sentenceEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+    return;
+  }
+  
+  // === Normal Mode: select and stop playback ===
   // Only select the sentence, don't auto-play (user must press play button)
   stopCurrentSource();
   stopSpeechRecognition();
@@ -512,8 +862,36 @@ document.getElementById('guideClose').addEventListener('click', () => guideModal
 guideModal.addEventListener('click', (e) => { if (e.target === guideModal) guideModal.classList.remove('show'); });
 
 // Button events
-audioBtn.addEventListener('click', playCurrentSentenceAudio);
-nextBtn.addEventListener('click', goNext);
+audioBtn.addEventListener('click', () => {
+  if (isGroupMode) {
+    // Play original audio of selected sentence
+    const d = dialogues[groupSelectedSentence];
+    if (!d || !audioBuffer) return;
+    stopCurrentSource();
+    isPlaying = true;
+    const duration = d.endTime - d.startTime;
+    startPlayback(d.startTime, duration);
+    setTimeout(() => { isPlaying = false; }, duration * 1000 + 200);
+  } else {
+    playCurrentSentenceAudio();
+  }
+});
+
+nextBtn.addEventListener('click', () => {
+  if (isGroupMode) {
+    // Reset group practice
+    if (groupRecognitionActive) stopGroupRecognition();
+    groupWordList = buildGroupWordList();
+    groupFinalTranscript = '';
+    practiceStarted = false;
+    groupSelectedSentence = 0;
+    renderTranscript();
+    updateProgress();
+    updatePlayButton();
+  } else {
+    goNext();
+  }
+});
 
 // Stats modal
 document.getElementById('statsClose').addEventListener('click', () => statsModal.classList.remove('show'));

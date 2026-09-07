@@ -154,6 +154,8 @@ body {
 .word-missed { color: #e74c3c; border-bottom-color: #e74c3c; text-decoration: line-through; }
 /* Hint mode: show unmatched words in orange, same spacing */
 .word-hint { color: #e67e22; border-bottom: 2px solid #f5cba7; font-weight: 500; }
+/* Group practice mode: matched words green */
+.word-matched { color: #1a7a5c; font-weight: 600; border-bottom: 2px solid transparent; }
 /* All words are clickable for TTS + translation */
 .sentence-text span { cursor: pointer; -webkit-user-select: none; user-select: none; }
 .sentence-text span:active { opacity: 0.7; }
