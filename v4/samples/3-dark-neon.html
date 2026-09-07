@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dark Neon - 小组讨论陪练</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    min-height: 100vh;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    padding: 20px 16px 40px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: 
+      radial-gradient(circle at 20% 30%, rgba(0,255,200,0.08) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(200,0,255,0.08) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(255,0,100,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .section-label {
+    text-align: center;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: rgba(0,255,200,0.4);
+    margin: 30px 0 16px;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+  }
+  .section-label:first-child { margin-top: 10px; }
+
+  /* ========== HOME PAGE ========== */
+  .home-header {
+    text-align: center;
+    padding: 40px 0 30px;
+    position: relative;
+    z-index: 1;
+  }
+  .home-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    color: #00ffc8;
+    text-shadow: 0 0 20px rgba(0,255,200,0.5), 0 0 40px rgba(0,255,200,0.2);
+  }
+  .home-subtitle {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 1px;
+    font-weight: 400;
+  }
+  .home-divider {
+    width: 60px;
+    height: 2px;
+    margin: 20px auto 0;
+    background: linear-gradient(90deg, transparent, #00ffc8, transparent);
+  }
+  .mode-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(0,255,200,0.15);
+    border-radius: 4px;
+    padding: 20px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+  .mode-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--neon-color, #00ffc8);
+    box-shadow: 0 0 10px var(--neon-color, #00ffc8);
+  }
+  .mode-card:active {
+    background: rgba(0,255,200,0.05);
+    border-color: rgba(0,255,200,0.4);
+  }
+  .mode-card.listen { --neon-color: #00d4ff; }
+  .mode-card.practice { --neon-color: #00ff88; }
+  .mode-card.group { --neon-color: #c800ff; }
+  .mode-icon {
+    width: 48px; height: 48px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--neon-color, #00ffc8);
+  }
+  .mode-info { flex: 1; }
+  .mode-name {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--neon-color, #00ffc8);
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px var(--neon-color, #00ffc8);
+  }
+  .mode-desc { font-size: 11px; color: rgba(255,255,255,0.35); line-height: 1.5; }
+  .mode-arrow {
+    color: var(--neon-color, #00ffc8);
+    font-size: 16px;
+    opacity: 0.5;
+  }
+
+  .last-session {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid #ff0066;
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .last-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; margin-bottom: 5px; }
+  .last-value { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 500; }
+  .last-continue {
+    font-size: 11px;
+    font-weight: 700;
+    color: #ff0066;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(255,0,102,0.5);
+  }
+
+  /* ========== PRACTICE PAGE ========== */
+  .practice-page {
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(0,255,200,0.12);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .practice-header {
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid rgba(0,255,200,0.1);
+    background: rgba(0,255,200,0.02);
+  }
+  .practice-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .icon-btn {
+    width: 30px; height: 30px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(0,255,200,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    color: #00ffc8;
+  }
+  .practice-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #00ffc8;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0,255,200,0.3);
+  }
+  .progress-bar-container {
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 35%;
+    background: linear-gradient(90deg, #00ff88, #00ffc8);
+    box-shadow: 0 0 10px #00ffc8;
+  }
+  .progress-text {
+    font-size: 10px;
+    color: rgba(0,255,200,0.4);
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .controls-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .seg-control {
+    flex: 1;
+    display: flex;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(0,255,200,0.1);
+    border-radius: 4px;
+    padding: 2px;
+  }
+  .seg-btn {
+    flex: 1;
+    padding: 6px 0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 3px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .seg-btn.active {
+    background: rgba(0,255,200,0.1);
+    color: #00ffc8;
+    text-shadow: 0 0 8px rgba(0,255,200,0.5);
+  }
+  .toggle-btn {
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(0,255,200,0.1);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.5px;
+  }
+  .toggle-btn.on {
+    border-color: rgba(0,255,136,0.4);
+    color: #00ff88;
+    text-shadow: 0 0 8px rgba(0,255,136,0.4);
+  }
+
+  .transcript-area {
+    padding: 14px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .sentence {
+    padding: 14px 16px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.3s;
+  }
+  .sentence.current {
+    background: rgba(0,255,200,0.03);
+    border: 1px solid rgba(0,255,200,0.25);
+    box-shadow: 0 0 20px rgba(0,255,200,0.05), inset 0 0 20px rgba(0,255,200,0.02);
+  }
+  .sentence.played { opacity: 0.4; }
+  .sentence-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .role-tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+  }
+  .role-A { background: rgba(255,0,100,0.1); color: #ff0066; border: 1px solid rgba(255,0,100,0.3); }
+  .role-B { background: rgba(0,212,255,0.1); color: #00d4ff; border: 1px solid rgba(0,212,255,0.3); }
+  .role-C { background: rgba(255,200,0,0.1); color: #ffc800; border: 1px solid rgba(255,200,0,0.3); }
+  .sentence-num { font-size: 10px; color: rgba(255,255,255,0.2); letter-spacing: 1px; }
+  .sentence-text {
+    font-size: 13px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.7);
+  }
+  .sentence-text .word-matched {
+    color: #00ff88;
+    font-weight: 600;
+    text-shadow: 0 0 8px rgba(0,255,136,0.4);
+  }
+  .sentence-text .word-blank {
+    color: rgba(255,255,255,0.15);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .sentence-zh {
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+  .my-turn-banner {
+    background: rgba(0,255,136,0.05);
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 0 14px 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #00ff88;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0,255,136,0.5);
+    animation: neonPulse 1.5s infinite;
+  }
+  @keyframes neonPulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(0,255,136,0.2); }
+    50% { box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  }
+  .bottom-dock {
+    padding: 12px 14px 16px;
+    border-top: 1px solid rgba(0,255,200,0.1);
+    display: flex;
+    gap: 10px;
+  }
+  .dock-btn {
+    flex: 1;
+    padding: 12px 0;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .dock-btn.secondary {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.5);
+  }
+  .dock-btn.primary {
+    background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,255,200,0.1));
+    border: 1px solid rgba(0,255,136,0.4);
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0,255,136,0.5);
+    box-shadow: 0 0 15px rgba(0,255,136,0.15);
+  }
+  .dock-btn .btn-icon { font-size: 16px; }
+  .dock-btn .btn-label { font-size: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ========== HOME PAGE ========== -->
+<div class="section-label">首页 · 模式选择</div>
+<div class="home-header">
+  <div class="home-title">SPEAK LAB</div>
+  <div class="home-subtitle">PLASTIC POLLUTION · GROUP DISCUSSION</div>
+  <div class="home-divider"></div>
+</div>
+
+<div class="mode-card listen">
+  <div class="mode-icon">🎧</div>
+  <div class="mode-info">
+    <div class="mode-name">LISTEN</div>
+    <div class="mode-desc">全文自动播放，可跟读、调节语速，适合熟悉内容</div>
+  </div>
+  <div class="mode-arrow">›</div>
+</div>
+
+<div class="mode-card practice">
+  <div class="mode-icon">🗣️</div>
+  <div class="mode-info">
+    <div class="mode-name">PRACTICE</div>
+    <div class="mode-desc">扮演 A/B/C，脱稿背诵语音识别，逐词点亮</div>
+  </div>
+  <div class="mode-arrow">›</div>
+</div>
+
+<div class="mode-card group">
+  <div class="mode-icon">👥</div>
+  <div class="mode-info">
+    <div class="mode-name">GROUP</div>
+    <div class="mode-desc">3人脱稿合练，语音识别全剧本，结束出报告</div>
+  </div>
+  <div class="mode-arrow">›</div>
+</div>
+
+<div class="last-session">
+  <div>
+    <div class="last-label">LAST SESSION</div>
+    <div class="last-value">PRACTICE · A · 12MIN · 78%</div>
+  </div>
+  <div class="last-continue">RESUME ›</div>
+</div>
+
+<!-- ========== PRACTICE PAGE ========== -->
+<div class="section-label">个人练习页</div>
+<div class="practice-page">
+  <div class="practice-header">
+    <div class="practice-top">
+      <div class="icon-btn">‹</div>
+      <div class="practice-title">PRACTICE · STUDENT A</div>
+      <div class="icon-btn">⚙</div>
+    </div>
+    <div class="progress-bar-container"><div class="progress-fill"></div></div>
+    <div class="progress-text">7 / 29 · 24%</div>
+    <div class="controls-row">
+      <div class="seg-control">
+        <div class="seg-btn">A</div>
+        <div class="seg-btn active">B</div>
+        <div class="seg-btn">C</div>
+      </div>
+      <div class="toggle-btn on">👁 原文</div>
+      <div class="toggle-btn">中</div>
+    </div>
+  </div>
+
+  <div class="transcript-area">
+    <div class="sentence played">
+      <div class="sentence-meta">
+        <span class="role-tag role-A">STUDENT A</span>
+        <span class="sentence-num">#05</span>
+      </div>
+      <div class="sentence-text">Plastic pollution is one of the most pressing environmental issues of our time.</div>
+      <div class="sentence-zh">塑料污染是当今最紧迫的环境问题之一。</div>
+    </div>
+
+    <div class="sentence current">
+      <div class="sentence-meta">
+        <span class="role-tag role-B">STUDENT B</span>
+        <span class="sentence-num">#06</span>
+      </div>
+      <div class="sentence-text">
+        <span class="word-matched">That</span>
+        <span class="word-matched">is</span>
+        <span class="word-matched">a</span>
+        <span class="word-matched">good</span>
+        <span class="word-matched">point.</span>
+        <span class="word-blank">But</span>
+        <span class="word-blank">do</span>
+        <span class="word-blank">you</span>
+        <span class="word-blank">think</span>
+        <span class="word-blank">individuals</span>
+        <span class="word-blank">can</span>
+        <span class="word-blank">really</span>
+        <span class="word-blank">make</span>
+        <span class="word-blank">a</span>
+        <span class="word-blank">difference?</span>
+      </div>
+      <div class="sentence-zh">说得好。但你认为个人真的能产生影响吗？</div>
+    </div>
+
+    <div class="sentence">
+      <div class="sentence-meta">
+        <span class="role-tag role-C">STUDENT C</span>
+        <span class="sentence-num">#07</span>
+      </div>
+      <div class="sentence-text" style="color:rgba(255,255,255,0.2)">Absolutely. Every small action counts...</div>
+    </div>
+  </div>
+
+  <div class="my-turn-banner">🎙️ YOUR TURN · STUDENT B</div>
+
+  <div class="bottom-dock">
+    <div class="dock-btn secondary">
+      <span class="btn-icon">🔊</span>
+      <span class="btn-label">原音</span>
+    </div>
+    <div class="dock-btn primary">
+      <span class="btn-icon">✅</span>
+      <span class="btn-label">读完了</span>
+    </div>
+    <div class="dock-btn secondary">
+      <span class="btn-icon">⏭</span>
+      <span class="btn-label">下一句</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
