@@ -36,7 +36,8 @@ function buildGroupWordList() {
   groupMatchedCount = 0;
   groupLastMatchedPos = -1;
   groupCurrentSentence = 0;
-  groupRecentWords = [];
+  groupCurrentSentenceLastMatch = -1;
+  groupNextSentenceMatches = 0;
   return flat;
 }
 let groupWordList = [];
@@ -46,7 +47,9 @@ let groupFinalTranscript = '';
 let groupOrigOnResult = null;
 let groupOrigOnEnd = null;
 let groupCurrentSentence = 0;  // current sentence index (locked, no backtracking)
-let groupRecentWords = [];  // recent spoken words for phrase matching (2-word confirmation)
+let groupCurrentSentenceLastMatch = -1;  // last matched word index within current sentence
+let groupNextSentenceMatches = 0;  // consecutive matches at start of next sentence
+const GROUP_NEXT_SENTENCE_THRESHOLD = 4;  // need 4 consecutive words to switch sentence
 
 function wordMatch(target, spoken) {
   if (!target || !spoken) return false;
@@ -81,76 +84,66 @@ function groupMatchWords(transcript) {
     const spoken = spokenWords[sp].replace(/[^a-z]/g, '');
     if (!spoken) continue;
     
-    // Add to recent words queue (keep last 3)
-    groupRecentWords.push(spoken);
-    if (groupRecentWords.length > 3) groupRecentWords.shift();
+    // Safety: don't go beyond last sentence
+    if (groupCurrentSentence >= TOTAL) break;
     
-    // Auto-advance: if current sentence is 80%+ matched, move to next sentence
-    while (groupCurrentSentence < TOTAL - 1 && getSentenceMatchRate(groupCurrentSentence) >= 0.8) {
-      groupCurrentSentence++;
-    }
+    const currentWords = dialogues[groupCurrentSentence].text.split(/\s+/).filter(w => w.length > 0);
     
-    // === Step 1: Try single-word match within current sentence ===
-    const sentStart = getSentenceStartPos(groupCurrentSentence);
-    const sentWords = dialogues[groupCurrentSentence].text.split(/\s+/).filter(w => w.length > 0);
-    const sentEnd = sentStart + sentWords.length;
-    
-    let found = -1;
-    for (let gp = sentStart; gp < sentEnd; gp++) {
-      if (groupMatchedWords[groupWordList[gp].sentence][groupWordList[gp].wordIdx]) continue;
-      if (wordMatch(groupWordList[gp].clean, spoken)) {
-        found = gp;
+    // === Step 1: Try to match within current sentence (from lastMatch+1 onwards) ===
+    let matchedInCurrent = false;
+    for (let wIdx = groupCurrentSentenceLastMatch + 1; wIdx < currentWords.length; wIdx++) {
+      if (groupMatchedWords[groupCurrentSentence][wIdx]) continue;
+      const target = currentWords[wIdx].toLowerCase().replace(/[^a-z]/g, '');
+      if (wordMatch(target, spoken)) {
+        groupMatchedWords[groupCurrentSentence][wIdx] = true;
+        groupMatchedCount++;
+        groupCurrentSentenceLastMatch = wIdx;
+        groupNextSentenceMatches = 0;  // reset next sentence counter
+        matchedInCurrent = true;
+        changed = true;
         break;
       }
     }
     
-    // === Step 2: If no match in current sentence, try 2-word phrase match to switch sentences ===
-    if (found === -1 && groupRecentWords.length >= 2) {
-      const w1 = groupRecentWords[groupRecentWords.length - 2];
-      const w2 = groupRecentWords[groupRecentWords.length - 1];
-      
-      // Search in next 3 sentences for consecutive 2-word match
-      for (let sIdx = groupCurrentSentence + 1; sIdx <= Math.min(groupCurrentSentence + 3, TOTAL - 1); sIdx++) {
-        const sStart = getSentenceStartPos(sIdx);
-        const sWords = dialogues[sIdx].text.split(/\s+/).filter(w => w.length > 0);
-        const sEnd = sStart + sWords.length;
-        
-        for (let gp = sStart; gp < sEnd - 1; gp++) {
-          if (groupMatchedWords[groupWordList[gp].sentence][groupWordList[gp].wordIdx]) continue;
-          if (groupMatchedWords[groupWordList[gp+1].sentence][groupWordList[gp+1].wordIdx]) continue;
-          
-          if (wordMatch(groupWordList[gp].clean, w1) && wordMatch(groupWordList[gp+1].clean, w2)) {
-            // Found 2-word phrase match! Switch to this sentence and mark both words
-            groupCurrentSentence = sIdx;
-            // Mark first word
-            groupMatchedWords[groupWordList[gp].sentence][groupWordList[gp].wordIdx] = true;
-            groupMatchedCount++;
-            groupLastMatchedPos = gp;
-            // Mark second word
-            groupMatchedWords[groupWordList[gp+1].sentence][groupWordList[gp+1].wordIdx] = true;
-            groupMatchedCount++;
-            groupLastMatchedPos = gp + 1;
-            changed = true;
-            found = gp + 1;  // mark as found so we don't try single match again
-            break;
-          }
-        }
-        if (found !== -1) break;
+    if (matchedInCurrent) {
+      // Auto-advance: if all words in current sentence are matched, move to next
+      if (groupCurrentSentenceLastMatch >= currentWords.length - 1) {
+        groupCurrentSentence++;
+        groupCurrentSentenceLastMatch = -1;
+        groupNextSentenceMatches = 0;
       }
-    }
-    
-    // === Step 3: If phrase match found, skip single match (already marked both words) ===
-    if (found !== -1 && found >= sentEnd) {
-      // Phrase match already handled, continue to next spoken word
       continue;
     }
     
-    // === Step 4: Single word match found in current sentence ===
-    if (found !== -1) {
-      groupMatchedWords[groupWordList[found].sentence][groupWordList[found].wordIdx] = true;
-      groupMatchedCount++;
-      groupLastMatchedPos = found;
-      changed = true;
+    // === Step 2: No match in current sentence, try next sentence's beginning ===
+    if (groupCurrentSentence + 1 >= TOTAL) continue;  // no next sentence
+    
+    const nextWords = dialogues[groupCurrentSentence + 1].text.split(/\s+/).filter(w => w.length > 0);
+    if (groupNextSentenceMatches >= nextWords.length) continue;
+    
+    const nextTarget = nextWords[groupNextSentenceMatches].toLowerCase().replace(/[^a-z]/g, '');
+    
+    if (wordMatch(nextTarget, spoken)) {
+      groupNextSentenceMatches++;
+      
+      // Check if we have enough consecutive matches to switch sentences
+      if (groupNextSentenceMatches >= GROUP_NEXT_SENTENCE_THRESHOLD) {
+        // Mark all matched words in next sentence
+        for (let wIdx = 0; wIdx < groupNextSentenceMatches; wIdx++) {
+          if (!groupMatchedWords[groupCurrentSentence + 1][wIdx]) {
+            groupMatchedWords[groupCurrentSentence + 1][wIdx] = true;
+            groupMatchedCount++;
+          }
+        }
+        // Switch to next sentence
+        groupCurrentSentence++;
+        groupCurrentSentenceLastMatch = groupNextSentenceMatches - 1;
+        groupNextSentenceMatches = 0;
+        changed = true;
+      }
+    } else {
+      // Not a match, reset counter
+      groupNextSentenceMatches = 0;
     }
   }
   
