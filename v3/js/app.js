@@ -239,15 +239,8 @@ function refreshGroupDisplay() {
     if (i >= dialogues.length) return;
     const d = dialogues[i];
     const words = d.text.split(/\s+/).filter(w => w.length > 0);
-    const matchedCount = groupMatchedWords[i] ? groupMatchedWords[i].filter(Boolean).length : 0;
-    const totalCount = words.length;
-    const pct = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
     
-    // Update meta
-    const meta = div.querySelector('.sentence-num');
-    if (meta) meta.textContent = `${matchedCount}/${totalCount} · ${pct}%`;
-    
-    // Update words
+    // Update words only (no per-sentence percentage - users don't look at screen during group practice)
     const textEl = div.querySelector('.sentence-text');
     if (textEl) {
       let wordsHtml = '';
@@ -263,9 +256,6 @@ function refreshGroupDisplay() {
       textEl.innerHTML = wordsHtml;
     }
   });
-  
-  // Update per-role real-time progress
-  updateGroupRoleProgress();
 }
 
 function updateGroupRoleProgress() {
@@ -480,9 +470,6 @@ function renderTranscript() {
       
       const roleShort = d.role.replace('Student ', '');
       const words = d.text.split(/\s+/).filter(w => w.length > 0);
-      const matchedCount = groupMatchedWords[i] ? groupMatchedWords[i].filter(Boolean).length : 0;
-      const totalCount = words.length;
-      const pct = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
       
       // Build word HTML: matched = green, unmatched = blank line
       let wordsHtml = '';
@@ -499,7 +486,6 @@ function renderTranscript() {
       div.innerHTML = `
         <div class="sentence-meta">
           <span class="role-tag role-${roleShort}">${d.role}</span>
-          <span class="sentence-num">${matchedCount}/${totalCount} · ${pct}%</span>
         </div>
         <div class="sentence-text">${wordsHtml}</div>
         <div class="sentence-zh">${d.zh}</div>
@@ -511,7 +497,6 @@ function renderTranscript() {
     if (currentEl) {
       setTimeout(() => currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
     }
-    updateGroupRoleProgress();
     return;
   }
   
