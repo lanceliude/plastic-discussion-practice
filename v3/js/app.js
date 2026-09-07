@@ -542,13 +542,20 @@ function renderTranscript() {
 }
 
 function updateProgress() {
+  const progressBar = document.querySelector('.progress-bar');
+  const progressInfo = document.querySelector('.progress-info');
+  
   if (isGroupMode) {
-    const pct = groupTotalWords > 0 ? Math.round((groupMatchedCount / groupTotalWords) * 100) : 0;
-    progressText.textContent = `已说对 ${groupMatchedCount} / ${groupTotalWords} 词`;
-    progressPercent.textContent = pct + '%';
-    progressFill.style.width = pct + '%';
+    // Hide progress bar in group mode (users don't look at screen during group practice)
+    if (progressBar) progressBar.style.display = 'none';
+    if (progressInfo) progressInfo.style.display = 'none';
     return;
   }
+  
+  // Show progress bar in normal modes
+  if (progressBar) progressBar.style.display = '';
+  if (progressInfo) progressInfo.style.display = '';
+  
   const pct = Math.round((currentIndex / TOTAL) * 100);
   progressText.textContent = `第 ${Math.min(currentIndex+1, TOTAL)} / ${TOTAL} 句`;
   progressPercent.textContent = pct + '%';
