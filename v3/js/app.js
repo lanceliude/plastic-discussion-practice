@@ -50,24 +50,52 @@ function groupMatchWords(transcript) {
   if (!spokenWords.length) return;
   
   let changed = false;
-  let searchStart = groupLastMatchedPos + 1;
-  // Allow looking back a bit for re-matching (in case of overlap)
-  if (searchStart > 0) searchStart = Math.max(0, searchStart - 3);
   
   for (let sp = 0; sp < spokenWords.length; sp++) {
     const spoken = spokenWords[sp].replace(/[^a-z]/g, '');
     if (!spoken) continue;
     
-    // Search forward from searchStart
+    // Search in a wide window around last matched position (allows backtracking)
+    // Window: 80 before to 80 after last matched position
+    const windowStart = Math.max(0, groupLastMatchedPos - 80);
+    const windowEnd = Math.min(groupWordList.length, groupLastMatchedPos + 80);
+    
     let found = -1;
-    for (let gp = searchStart; gp < groupWordList.length && gp < searchStart + 15; gp++) {
+    let bestDist = Infinity;
+    
+    // First pass: search in the wide window, find closest unmatched match
+    for (let gp = windowStart; gp < windowEnd; gp++) {
       if (groupMatchedWords[groupWordList[gp].sentence][groupWordList[gp].wordIdx]) continue;
       const target = groupWordList[gp].clean;
       if (!target) continue;
-      // Exact match or fuzzy match (startsWith for short words)
-      if (target === spoken || (target.length > 4 && target.startsWith(spoken)) || (spoken.length > 4 && spoken.startsWith(target))) {
-        found = gp;
-        break;
+      const isMatch = (target === spoken || 
+                       (target.length > 4 && target.startsWith(spoken)) || 
+                       (spoken.length > 4 && spoken.startsWith(target)));
+      if (isMatch) {
+        const dist = Math.abs(gp - groupLastMatchedPos);
+        if (dist < bestDist) {
+          bestDist = dist;
+          found = gp;
+        }
+      }
+    }
+    
+    // Second pass: if not found in window, search entire script for closest unmatched match
+    if (found === -1) {
+      for (let gp = 0; gp < groupWordList.length; gp++) {
+        if (groupMatchedWords[groupWordList[gp].sentence][groupWordList[gp].wordIdx]) continue;
+        const target = groupWordList[gp].clean;
+        if (!target) continue;
+        const isMatch = (target === spoken || 
+                         (target.length > 4 && target.startsWith(spoken)) || 
+                         (spoken.length > 4 && spoken.startsWith(target)));
+        if (isMatch) {
+          const dist = Math.abs(gp - groupLastMatchedPos);
+          if (dist < bestDist) {
+            bestDist = dist;
+            found = gp;
+          }
+        }
       }
     }
     
@@ -76,16 +104,13 @@ function groupMatchWords(transcript) {
       groupMatchedWords[item.sentence][item.wordIdx] = true;
       groupMatchedCount++;
       groupLastMatchedPos = found;
-      searchStart = found + 1;
       changed = true;
     }
   }
   
   if (changed) {
     updateProgress();
-    // Update only the changed sentences' display for performance
     refreshGroupDisplay();
-    // Check if all words matched
     if (groupMatchedCount >= groupTotalWords) {
       setTimeout(() => finishGroupPractice(), 1000);
     }
@@ -801,6 +826,95 @@ function restartPractice() {
   updatePlayButton();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// === Group Practice: long press to reset from sentence ===
+let groupPressTimer = null;
+let groupPressSentence = -1;
+
+function resetGroupFromSentence(idx) {
+  if (!isGroupMode) return;
+  // Clear all matches from this sentence onwards
+  for (let i = idx; i < dialogues.length; i++) {
+    if (groupMatchedWords[i]) {
+      groupMatchedWords[i].fill(false);
+    }
+  }
+  // Recalculate matched count
+  groupMatchedCount = 0;
+  for (let i = 0; i < idx; i++) {
+    if (groupMatchedWords[i]) {
+      groupMatchedCount += groupMatchedWords[i].filter(Boolean).length;
+    }
+  }
+  // Reset last matched position to the word before this sentence
+  groupLastMatchedPos = -1;
+  for (let i = 0; i < idx; i++) {
+    const words = dialogues[i].text.split(/\s+/).filter(w => w.length > 0);
+    groupLastMatchedPos += words.length;
+  }
+  // Clear final transcript to avoid old matches
+  groupFinalTranscript = '';
+  groupSelectedSentence = idx;
+  renderTranscript();
+  updateProgress();
+  // Show brief feedback
+  const bar = document.getElementById('myTurnBar');
+  if (bar) {
+    const text = document.getElementById('myTurnText');
+    if (text) text.textContent = '✅ 已从第 ' + (idx+1) + ' 句重新开始';
+    bar.classList.add('show');
+    setTimeout(() => {
+      if (groupRecognitionActive) {
+        if (text) text.textContent = '🎙️ 合练中 - 正在识别';
+      } else {
+        bar.classList.remove('show');
+      }
+    }, 1500);
+  }
+}
+
+transcriptEl.addEventListener('mousedown', (e) => {
+  if (!isGroupMode) return;
+  const sentenceEl = e.target.closest('.sentence');
+  if (!sentenceEl) return;
+  const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
+  if (idx === -1) return;
+  groupPressSentence = idx;
+  groupPressTimer = setTimeout(() => {
+    resetGroupFromSentence(idx);
+    groupPressSentence = -1;
+  }, 600);
+});
+
+transcriptEl.addEventListener('mouseup', () => {
+  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
+});
+
+transcriptEl.addEventListener('mouseleave', () => {
+  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
+});
+
+// Touch events for mobile
+transcriptEl.addEventListener('touchstart', (e) => {
+  if (!isGroupMode) return;
+  const sentenceEl = e.target.closest('.sentence');
+  if (!sentenceEl) return;
+  const idx = Array.from(transcriptEl.children).indexOf(sentenceEl);
+  if (idx === -1) return;
+  groupPressSentence = idx;
+  groupPressTimer = setTimeout(() => {
+    resetGroupFromSentence(idx);
+    groupPressSentence = -1;
+  }, 600);
+}, { passive: true });
+
+transcriptEl.addEventListener('touchend', () => {
+  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
+});
+
+transcriptEl.addEventListener('touchcancel', () => {
+  if (groupPressTimer) { clearTimeout(groupPressTimer); groupPressTimer = null; }
+});
 
 // Click any sentence to jump
 transcriptEl.addEventListener('click', (e) => {
