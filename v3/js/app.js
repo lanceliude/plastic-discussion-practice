@@ -115,34 +115,39 @@ function groupMatchWords(transcript) {
       continue;
     }
     
-    // === Step 2: No match in current sentence, try next sentence's beginning ===
+    // === Step 2: No match in current sentence, try next sentence ===
+    // Allow skipping misspoken words at the beginning: search first 8 words for a match
     if (groupCurrentSentence + 1 >= TOTAL) continue;  // no next sentence
     
     const nextWords = dialogues[groupCurrentSentence + 1].text.split(/\s+/).filter(w => w.length > 0);
-    if (groupNextSentenceMatches >= nextWords.length) continue;
+    const searchLimit = Math.min(nextWords.length, 8);  // only search first 8 words
     
-    const nextTarget = nextWords[groupNextSentenceMatches].toLowerCase().replace(/[^a-z]/g, '');
+    let foundInNext = -1;
+    for (let wIdx = 0; wIdx < searchLimit; wIdx++) {
+      if (groupMatchedWords[groupCurrentSentence + 1][wIdx]) continue;  // skip already matched
+      const target = nextWords[wIdx].toLowerCase().replace(/[^a-z]/g, '');
+      if (wordMatch(target, spoken)) {
+        foundInNext = wIdx;
+        break;
+      }
+    }
     
-    if (wordMatch(nextTarget, spoken)) {
+    if (foundInNext >= 0) {
+      // Mark this word in next sentence
+      groupMatchedWords[groupCurrentSentence + 1][foundInNext] = true;
+      groupMatchedCount++;
       groupNextSentenceMatches++;
       
       // Check if we have enough consecutive matches to switch sentences
       if (groupNextSentenceMatches >= GROUP_NEXT_SENTENCE_THRESHOLD) {
-        // Mark all matched words in next sentence
-        for (let wIdx = 0; wIdx < groupNextSentenceMatches; wIdx++) {
-          if (!groupMatchedWords[groupCurrentSentence + 1][wIdx]) {
-            groupMatchedWords[groupCurrentSentence + 1][wIdx] = true;
-            groupMatchedCount++;
-          }
-        }
         // Switch to next sentence
         groupCurrentSentence++;
-        groupCurrentSentenceLastMatch = groupNextSentenceMatches - 1;
+        groupCurrentSentenceLastMatch = foundInNext;
         groupNextSentenceMatches = 0;
         changed = true;
       }
     } else {
-      // Not a match, reset counter
+      // No match in next sentence, reset consecutive counter
       groupNextSentenceMatches = 0;
     }
   }
