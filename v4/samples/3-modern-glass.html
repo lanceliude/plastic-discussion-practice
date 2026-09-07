@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Modern Glass</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: linear-gradient(160deg, #f0f4f8 0%, #e8ecf1 40%, #f5f0f5 100%);
+    min-height: 100vh;
+    color: #1a1a2e;
+    padding: 0 0 90px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .svg-icon { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .svg-icon-sm { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .svg-icon-lg { width: 28px; height: 28px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(26,26,46,0.35);
+    padding: 36px 24px 14px;
+  }
+
+  /* ========== HOME ========== */
+  .home-greeting {
+    padding: 50px 24px 24px;
+  }
+  .home-greeting .greeting {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(26,26,46,0.45);
+    margin-bottom: 6px;
+  }
+  .home-greeting h1 {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+  }
+  .home-greeting .subtitle {
+    font-size: 15px;
+    color: rgba(26,26,46,0.45);
+    margin-top: 8px;
+    font-weight: 500;
+  }
+
+  .mode-grid {
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .mode-tile {
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.8);
+    border-radius: 20px;
+    padding: 20px 18px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  }
+  .mode-tile:active { transform: scale(0.97); }
+  .mode-tile.wide {
+    grid-column: 1 / -1;
+    min-height: 100px;
+    flex-direction: row;
+    align-items: center;
+  }
+  .mode-tile-icon {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mode-tile.listen .mode-tile-icon { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7; }
+  .mode-tile.practice .mode-tile-icon { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #16a34a; }
+  .mode-tile.group .mode-tile-icon { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); color: #9333ea; }
+  .mode-tile-info h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
+  }
+  .mode-tile-info p {
+    font-size: 12px;
+    color: rgba(26,26,46,0.45);
+    line-height: 1.4;
+    font-weight: 500;
+  }
+  .mode-tile.wide .mode-tile-info { flex: 1; margin-left: 14px; }
+  .mode-tile-arrow {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(26,26,46,0.3);
+  }
+
+  .continue-card {
+    margin: 20px 20px 0;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 18px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  }
+  .continue-icon {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    display: flex; align-items: center; justify-content: center;
+    color: #d97706;
+  }
+  .continue-info { flex: 1; }
+  .continue-info .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(26,26,46,0.35);
+    margin-bottom: 4px;
+  }
+  .continue-info .value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+  .continue-btn {
+    padding: 10px 18px;
+    background: linear-gradient(135deg, #1a1a2e, #2d2d44);
+    color: #fff;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ========== PRACTICE ========== */
+  .practice-shell {
+    margin: 0 16px;
+    background: rgba(255,255,255,0.65);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  }
+  .practice-header {
+    padding: 16px 20px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-back {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.8);
+    display: flex; align-items: center; justify-content: center;
+    color: #1a1a2e;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .header-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: rgba(26,26,46,0.4);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+  .header-settings {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.8);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(26,26,46,0.5);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .progress-widget {
+    margin: 14px 20px;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.7);
+  }
+  .progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .progress-top .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(26,26,46,0.4);
+  }
+  .progress-top .value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+  .progress-track {
+    height: 5px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 35%;
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    border-radius: 3px;
+  }
+
+  .control-row {
+    padding: 0 20px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .role-tabs {
+    flex: 1;
+    display: flex;
+    background: rgba(255,255,255,0.5);
+    border-radius: 12px;
+    padding: 3px;
+    border: 1px solid rgba(255,255,255,0.7);
+  }
+  .role-tabs button {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(26,26,46,0.4);
+    border-radius: 10px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .role-tabs button.active {
+    background: #fff;
+    color: #1a1a2e;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .icon-toggle {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.7);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(26,26,46,0.35);
+    transition: all 0.2s;
+  }
+  .icon-toggle.on {
+    background: rgba(22,163,74,0.1);
+    border-color: rgba(22,163,74,0.2);
+    color: #16a34a;
+  }
+
+  .script-area {
+    padding: 0 16px 16px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .script-item {
+    padding: 16px 18px;
+    border-radius: 16px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.6);
+    transition: all 0.3s;
+  }
+  .script-item.current {
+    background: rgba(255,255,255,0.85);
+    border-color: rgba(22,163,74,0.2);
+    box-shadow: 0 4px 20px rgba(22,163,74,0.06);
+  }
+  .script-item.past { opacity: 0.4; }
+  .script-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .script-role {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+  .script-role.A { background: rgba(239,68,68,0.1); color: #dc2626; }
+  .script-role.B { background: rgba(37,99,235,0.1); color: #2563eb; }
+  .script-role.C { background: rgba(217,119,6,0.1); color: #d97706; }
+  .script-idx {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(26,26,46,0.25);
+  }
+  .script-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: #1a1a2e;
+    letter-spacing: -0.1px;
+  }
+  .script-text .ok {
+    color: #16a34a;
+    font-weight: 600;
+  }
+  .script-text .miss {
+    color: rgba(26,26,46,0.2);
+    border-bottom: 1px solid rgba(26,26,46,0.1);
+  }
+  .script-zh {
+    font-size: 12px;
+    color: rgba(26,26,46,0.35);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .turn-pill {
+    margin: 0 20px 14px;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, rgba(22,163,74,0.1), rgba(34,197,94,0.05));
+    border: 1px solid rgba(22,163,74,0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .turn-pill .ring {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #16a34a;
+    box-shadow: 0 0 0 4px rgba(22,163,74,0.15);
+    animation: ring-pulse 1.5s infinite;
+  }
+  @keyframes ring-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(22,163,74,0.15); }
+    50% { box-shadow: 0 0 0 8px rgba(22,163,74,0.05); }
+  }
+  .turn-pill span {
+    font-size: 14px;
+    font-weight: 700;
+    color: #16a34a;
+  }
+
+  .action-bar {
+    padding: 14px 16px 18px;
+    display: flex;
+    gap: 12px;
+    border-top: 1px solid rgba(0,0,0,0.04);
+    background: rgba(255,255,255,0.3);
+  }
+  .action-btn {
+    flex: 1;
+    padding: 14px 0;
+    border-radius: 16px;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+  }
+  .action-btn:active { transform: scale(0.97); }
+  .action-btn.secondary {
+    background: rgba(255,255,255,0.8);
+    color: #1a1a2e;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .action-btn.primary {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(22,163,74,0.25);
+  }
+  .action-btn .btn-sub {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.75;
+  }
+
+  /* ========== BOTTOM TAB BAR ========== */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-top: 1px solid rgba(255,255,255,0.9);
+    display: flex;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    z-index: 100;
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+    color: rgba(26,26,46,0.35);
+    transition: color 0.2s;
+  }
+  .tab-item.active {
+    color: #1a1a2e;
+  }
+  .tab-item .tab-icon {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tab-item .tab-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== HOME ========== -->
+<div class="section-label">首页</div>
+<div class="home-greeting">
+  <div class="greeting">下午好，Lance</div>
+  <h1>准备好练习了吗？</h1>
+  <div class="subtitle">Plastic Pollution Group Discussion</div>
+</div>
+
+<div class="mode-grid">
+  <div class="mode-tile listen">
+    <div class="mode-tile-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+    </div>
+    <div class="mode-tile-info">
+      <h3>听读</h3>
+      <p>全文播放<br>调节语速</p>
+    </div>
+  </div>
+
+  <div class="mode-tile practice">
+    <div class="mode-tile-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+    </div>
+    <div class="mode-tile-info">
+      <h3>练习</h3>
+      <p>脱稿背诵<br>逐词点亮</p>
+    </div>
+  </div>
+
+  <div class="mode-tile group wide">
+    <div class="mode-tile-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="mode-tile-info">
+      <h3>合练模式</h3>
+      <p>三人脱稿合练，语音识别全剧本，结束出完成度报告</p>
+    </div>
+    <div class="mode-tile-arrow">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+  </div>
+</div>
+
+<div class="continue-card">
+  <div class="continue-icon">
+    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  </div>
+  <div class="continue-info">
+    <div class="label">继续上次练习</div>
+    <div class="value">Student A · 第 7 句 · 完成 78%</div>
+  </div>
+  <div class="continue-btn">
+    继续
+    <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+  </div>
+</div>
+
+<!-- ========== PRACTICE ========== -->
+<div class="section-label">个人练习页</div>
+<div class="practice-shell">
+  <div class="practice-header">
+    <div class="header-left">
+      <div class="header-back">
+        <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      </div>
+      <div>
+        <div class="header-title">个人练习</div>
+        <div class="header-sub">Student B · 背诵中</div>
+      </div>
+    </div>
+    <div class="header-settings">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  </div>
+
+  <div class="progress-widget">
+    <div class="progress-top">
+      <span class="label">练习进度</span>
+      <span class="value">第 7 / 29 句 · 24%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill"></div></div>
+  </div>
+
+  <div class="control-row">
+    <div class="role-tabs">
+      <button>A</button>
+      <button class="active">B</button>
+      <button>C</button>
+    </div>
+    <div class="icon-toggle on">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+    <div class="icon-toggle">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+    </div>
+  </div>
+
+  <div class="script-area">
+    <div class="script-item past">
+      <div class="script-head">
+        <span class="script-role A">Student A</span>
+        <span class="script-idx">05</span>
+      </div>
+      <div class="script-text">Plastic pollution is one of the most pressing environmental issues of our time.</div>
+      <div class="script-zh">塑料污染是当今最紧迫的环境问题之一。</div>
+    </div>
+
+    <div class="script-item current">
+      <div class="script-head">
+        <span class="script-role B">Student B</span>
+        <span class="script-idx">06</span>
+      </div>
+      <div class="script-text">
+        <span class="ok">That is a good point.</span>
+        <span class="miss"> But do you think individuals can really make a difference?</span>
+      </div>
+      <div class="script-zh">说得好。但你认为个人真的能产生影响吗？</div>
+    </div>
+
+    <div class="script-item">
+      <div class="script-head">
+        <span class="script-role C">Student C</span>
+        <span class="script-idx">07</span>
+      </div>
+      <div class="script-text" style="color:rgba(26,26,46,0.2)">Absolutely. Every small action counts...</div>
+    </div>
+  </div>
+
+  <div class="turn-pill">
+    <div class="ring"></div>
+    <span>轮到你了 · Student B</span>
+  </div>
+
+  <div class="action-bar">
+    <button class="action-btn secondary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      <span class="btn-sub">原音</span>
+    </button>
+    <button class="action-btn primary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <span class="btn-sub">读完了</span>
+    </button>
+    <button class="action-btn secondary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
+      <span class="btn-sub">下一句</span>
+    </button>
+  </div>
+</div>
+
+<!-- ========== BOTTOM TAB BAR ========== -->
+<div class="tab-bar">
+  <div class="tab-item active">
+    <div class="tab-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <div class="tab-label">首页</div>
+  </div>
+  <div class="tab-item">
+    <div class="tab-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    </div>
+    <div class="tab-label">练习</div>
+  </div>
+  <div class="tab-item">
+    <div class="tab-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+    </div>
+    <div class="tab-label">统计</div>
+  </div>
+  <div class="tab-item">
+    <div class="tab-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+    </div>
+    <div class="tab-label">我的</div>
+  </div>
+</div>
+
+</body>
+</html>

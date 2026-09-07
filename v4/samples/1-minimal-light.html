@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Minimal Light</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: #fafafa;
+    color: #1d1d1f;
+    padding: 0 0 50px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .svg-icon { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .svg-icon-sm { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .svg-icon-lg { width: 28px; height: 28px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #86868b;
+    padding: 40px 24px 16px;
+  }
+
+  /* ========== HOME ========== */
+  .home-hero {
+    padding: 60px 24px 40px;
+  }
+  .home-hero h1 {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .home-hero p {
+    font-size: 17px;
+    color: #86868b;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+  .mode-list {
+    padding: 0 16px;
+  }
+  .mode-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 16px;
+    border-radius: 14px;
+    margin-bottom: 4px;
+    transition: background 0.2s;
+  }
+  .mode-item:active { background: #f0f0f0; }
+  .mode-icon-wrap {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .mode-icon-wrap.listen { background: #e8f4fd; color: #007aff; }
+  .mode-icon-wrap.practice { background: #e8faf0; color: #34c759; }
+  .mode-icon-wrap.group { background: #f3e8fd; color: #af52de; }
+  .mode-text { flex: 1; }
+  .mode-text h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    letter-spacing: -0.2px;
+  }
+  .mode-text p {
+    font-size: 13px;
+    color: #86868b;
+    line-height: 1.35;
+  }
+  .mode-chevron { color: #c7c7cc; flex-shrink: 0; }
+
+  .last-session {
+    margin: 24px 16px 0;
+    padding: 18px 20px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e8e8ed;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .last-info .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #86868b;
+    margin-bottom: 5px;
+  }
+  .last-info .value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1d1d1f;
+  }
+  .last-continue {
+    font-size: 14px;
+    font-weight: 600;
+    color: #007aff;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  /* ========== PRACTICE ========== */
+  .practice-page {
+    background: #fff;
+    margin: 0 16px;
+    border-radius: 20px;
+    border: 1px solid #e8e8ed;
+    overflow: hidden;
+  }
+  .practice-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f2f2f7;
+  }
+  .nav-btn {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #007aff;
+    transition: background 0.2s;
+  }
+  .nav-btn:active { background: #f2f2f7; }
+  .nav-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+  .progress-section {
+    padding: 14px 20px 16px;
+    border-bottom: 1px solid #f2f2f7;
+  }
+  .progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .progress-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #86868b;
+  }
+  .progress-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d1d1f;
+  }
+  .progress-track {
+    height: 4px;
+    background: #f2f2f7;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill-bar {
+    height: 100%;
+    width: 35%;
+    background: #34c759;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+  .controls-section {
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-bottom: 1px solid #f2f2f7;
+  }
+  .role-seg {
+    flex: 1;
+    display: flex;
+    background: #f2f2f7;
+    border-radius: 9px;
+    padding: 2px;
+  }
+  .role-seg button {
+    flex: 1;
+    padding: 7px 0;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: #86868b;
+    border-radius: 7px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .role-seg button.active {
+    background: #fff;
+    color: #1d1d1f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .toggle-pill {
+    padding: 7px 14px;
+    background: #f2f2f7;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #86868b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .toggle-pill.on {
+    background: #e8faf0;
+    color: #34c759;
+  }
+
+  .transcript-section {
+    padding: 16px;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .sentence-block {
+    padding: 16px 18px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    background: #fafafa;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+  }
+  .sentence-block.current {
+    background: #fff;
+    border-color: #e8e8ed;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .sentence-block.played { opacity: 0.45; }
+  .sentence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .role-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .role-badge.A { background: #ffebee; color: #d32f2f; }
+  .role-badge.B { background: #e3f2fd; color: #1976d2; }
+  .role-badge.C { background: #fff8e1; color: #f57c00; }
+  .sentence-index {
+    font-size: 11px;
+    font-weight: 500;
+    color: #c7c7cc;
+  }
+  .sentence-content {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #1d1d1f;
+    letter-spacing: -0.1px;
+  }
+  .sentence-content .matched {
+    color: #34c759;
+    font-weight: 600;
+  }
+  .sentence-content .blank {
+    color: #c7c7cc;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .sentence-translation {
+    font-size: 13px;
+    color: #86868b;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .turn-indicator {
+    margin: 0 16px 12px;
+    padding: 12px 18px;
+    background: #e8faf0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .turn-indicator .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #34c759;
+    animation: pulse-dot 1.5s infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+  .turn-indicator span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #34c759;
+  }
+
+  .bottom-actions {
+    padding: 12px 16px 16px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #f2f2f7;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 14px 0;
+    border-radius: 14px;
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+  }
+  .action-btn:active { transform: scale(0.97); }
+  .action-btn.secondary {
+    background: #f2f2f7;
+    color: #1d1d1f;
+  }
+  .action-btn.primary {
+    background: #34c759;
+    color: #fff;
+  }
+  .action-btn .btn-label {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== HOME ========== -->
+<div class="section-label">首页</div>
+<div class="home-hero">
+  <h1>小组讨论<br>口语陪练</h1>
+  <p>Plastic Pollution Group Discussion</p>
+</div>
+
+<div class="mode-list">
+  <div class="mode-item">
+    <div class="mode-icon-wrap listen">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+    </div>
+    <div class="mode-text">
+      <h3>听读模式</h3>
+      <p>全文自动播放，可跟读调节语速</p>
+    </div>
+    <div class="mode-chevron">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+  </div>
+
+  <div class="mode-item">
+    <div class="mode-icon-wrap practice">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+    </div>
+    <div class="mode-text">
+      <h3>个人练习</h3>
+      <p>扮演角色脱稿背诵，语音识别逐词点亮</p>
+    </div>
+    <div class="mode-chevron">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+  </div>
+
+  <div class="mode-item">
+    <div class="mode-icon-wrap group">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="mode-text">
+      <h3>合练模式</h3>
+      <p>三人脱稿合练，结束出完成度报告</p>
+    </div>
+    <div class="mode-chevron">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+  </div>
+</div>
+
+<div class="last-session">
+  <div class="last-info">
+    <div class="label">上次练习</div>
+    <div class="value">个人练习 · Student A · 12 分钟 · 78%</div>
+  </div>
+  <div class="last-continue">
+    继续
+    <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+  </div>
+</div>
+
+<!-- ========== PRACTICE ========== -->
+<div class="section-label">个人练习页</div>
+<div class="practice-page">
+  <div class="practice-nav">
+    <div class="nav-btn">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+    </div>
+    <div class="nav-title">个人练习</div>
+    <div class="nav-btn">
+      <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  </div>
+
+  <div class="progress-section">
+    <div class="progress-row">
+      <span class="progress-label">练习进度</span>
+      <span class="progress-value">第 7 / 29 句 · 24%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill-bar"></div></div>
+  </div>
+
+  <div class="controls-section">
+    <div class="role-seg">
+      <button>A</button>
+      <button class="active">B</button>
+      <button>C</button>
+    </div>
+    <div class="toggle-pill on">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+      原文
+    </div>
+    <div class="toggle-pill">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+    </div>
+  </div>
+
+  <div class="transcript-section">
+    <div class="sentence-block played">
+      <div class="sentence-header">
+        <span class="role-badge A">Student A</span>
+        <span class="sentence-index">05</span>
+      </div>
+      <div class="sentence-content">Plastic pollution is one of the most pressing environmental issues of our time.</div>
+      <div class="sentence-translation">塑料污染是当今最紧迫的环境问题之一。</div>
+    </div>
+
+    <div class="sentence-block current">
+      <div class="sentence-header">
+        <span class="role-badge B">Student B</span>
+        <span class="sentence-index">06</span>
+      </div>
+      <div class="sentence-content">
+        <span class="matched">That</span>
+        <span class="matched">is</span>
+        <span class="matched">a</span>
+        <span class="matched">good</span>
+        <span class="matched">point.</span>
+        <span class="blank">But</span>
+        <span class="blank">do</span>
+        <span class="blank">you</span>
+        <span class="blank">think</span>
+        <span class="blank">individuals</span>
+        <span class="blank">can</span>
+        <span class="blank">really</span>
+        <span class="blank">make</span>
+        <span class="blank">a</span>
+        <span class="blank">difference?</span>
+      </div>
+      <div class="sentence-translation">说得好。但你认为个人真的能产生影响吗？</div>
+    </div>
+
+    <div class="sentence-block">
+      <div class="sentence-header">
+        <span class="role-badge C">Student C</span>
+        <span class="sentence-index">07</span>
+      </div>
+      <div class="sentence-content" style="color:#c7c7cc">Absolutely. Every small action counts...</div>
+    </div>
+  </div>
+
+  <div class="turn-indicator">
+    <div class="dot"></div>
+    <span>轮到你了 · Student B</span>
+  </div>
+
+  <div class="bottom-actions">
+    <button class="action-btn secondary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      <span class="btn-label">原音</span>
+    </button>
+    <button class="action-btn primary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <span class="btn-label">读完了</span>
+    </button>
+    <button class="action-btn secondary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
+      <span class="btn-label">下一句</span>
+    </button>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dark Immersive</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: #0a0a0c;
+    color: #fff;
+    padding: 0 0 50px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .svg-icon { width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .svg-icon-sm { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .svg-icon-lg { width: 32px; height: 32px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    padding: 40px 24px 16px;
+  }
+
+  /* ========== HOME ========== */
+  .home-header {
+    padding: 50px 24px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .home-title h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .home-title p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.4);
+    font-weight: 500;
+  }
+  .home-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .mode-cards {
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .mode-card {
+    position: relative;
+    border-radius: 22px;
+    padding: 26px 24px;
+    overflow: hidden;
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s;
+  }
+  .mode-card:active { transform: scale(0.98); }
+  .mode-card.listen {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0d1b2a 100%);
+  }
+  .mode-card.practice {
+    background: linear-gradient(135deg, #1a3d2e 0%, #0a1f17 100%);
+  }
+  .mode-card.group {
+    background: linear-gradient(135deg, #3d1a3a 0%, #1f0a1d 100%);
+  }
+  .mode-card-bg-icon {
+    position: absolute;
+    right: -10px;
+    bottom: -15px;
+    opacity: 0.12;
+    transform: rotate(-10deg);
+  }
+  .mode-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+  }
+  .mode-card-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mode-card.listen .mode-card-icon { color: #4fc3f7; }
+  .mode-card.practice .mode-card-icon { color: #66bb6a; }
+  .mode-card.group .mode-card-icon { color: #ba68c8; }
+  .mode-card-arrow {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.6);
+  }
+  .mode-card-info {
+    position: relative;
+    z-index: 1;
+  }
+  .mode-card-info h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    letter-spacing: -0.3px;
+  }
+  .mode-card-info p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.4;
+    font-weight: 500;
+  }
+
+  .quick-stats {
+    margin: 24px 20px 0;
+    display: flex;
+    gap: 12px;
+  }
+  .stat-card {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .stat-card .stat-num {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .stat-card .stat-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  /* ========== PRACTICE ========== */
+  .practice-container {
+    margin: 0 16px;
+    background: #121216;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .practice-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .back-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.7);
+  }
+  .top-bar-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .top-bar-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 2px;
+  }
+  .settings-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .now-playing-bar {
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.02);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .now-playing-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1a3d2e, #0a1f17);
+    display: flex; align-items: center; justify-content: center;
+    color: #66bb6a;
+  }
+  .now-playing-info { flex: 1; }
+  .now-playing-info .np-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #66bb6a;
+    margin-bottom: 3px;
+  }
+  .now-playing-info .np-text {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .np-progress {
+    width: 50px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .np-progress-fill {
+    height: 100%;
+    width: 60%;
+    background: #66bb6a;
+    border-radius: 2px;
+  }
+
+  .controls-bar {
+    padding: 14px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .role-pills {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+  }
+  .role-pill {
+    flex: 1;
+    padding: 8px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.4);
+    transition: all 0.2s;
+  }
+  .role-pill.active {
+    background: rgba(102,187,106,0.15);
+    color: #66bb6a;
+  }
+  .control-icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.5);
+  }
+  .control-icon-btn.on {
+    background: rgba(102,187,106,0.15);
+    color: #66bb6a;
+  }
+
+  .lyrics-area {
+    padding: 20px;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+  .lyric-line {
+    padding: 16px 18px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.02);
+    border-left: 3px solid transparent;
+    transition: all 0.3s;
+  }
+  .lyric-line.current {
+    background: rgba(102,187,106,0.06);
+    border-left-color: #66bb6a;
+  }
+  .lyric-line.past { opacity: 0.35; }
+  .lyric-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .lyric-role {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 5px;
+  }
+  .lyric-role.A { background: rgba(239,83,80,0.15); color: #ef5350; }
+  .lyric-role.B { background: rgba(66,165,245,0.15); color: #42a5f5; }
+  .lyric-role.C { background: rgba(255,167,38,0.15); color: #ffa726; }
+  .lyric-num {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.2);
+  }
+  .lyric-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: -0.1px;
+  }
+  .lyric-text .done {
+    color: #66bb6a;
+    font-weight: 600;
+  }
+  .lyric-text .todo {
+    color: rgba(255,255,255,0.2);
+  }
+  .lyric-zh {
+    font-size: 12px;
+    color: rgba(255,255,255,0.25);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .turn-banner {
+    margin: 0 20px 14px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(102,187,106,0.12), rgba(102,187,106,0.04));
+    border: 1px solid rgba(102,187,106,0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .turn-wave {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 20px;
+  }
+  .turn-wave span {
+    width: 3px;
+    background: #66bb6a;
+    border-radius: 2px;
+    animation: wave 1s ease-in-out infinite;
+  }
+  .turn-wave span:nth-child(1) { height: 8px; animation-delay: 0s; }
+  .turn-wave span:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+  .turn-wave span:nth-child(3) { height: 12px; animation-delay: 0.2s; }
+  .turn-wave span:nth-child(4) { height: 18px; animation-delay: 0.3s; }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.5); }
+    50% { transform: scaleY(1); }
+  }
+  .turn-banner-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #66bb6a;
+  }
+
+  .player-bar {
+    padding: 14px 16px 18px;
+    display: flex;
+    gap: 12px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.2);
+  }
+  .player-btn {
+    flex: 1;
+    padding: 16px 0;
+    border-radius: 16px;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .player-btn:active { transform: scale(0.96); }
+  .player-btn.secondary {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.7);
+  }
+  .player-btn.primary {
+    background: linear-gradient(135deg, #66bb6a, #43a047);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(102,187,106,0.25);
+  }
+  .player-btn .btn-text {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== HOME ========== -->
+<div class="section-label">首页</div>
+<div class="home-header">
+  <div class="home-title">
+    <h1>口语陪练</h1>
+    <p>Plastic Pollution Discussion</p>
+  </div>
+  <div class="home-avatar">L</div>
+</div>
+
+<div class="mode-cards">
+  <div class="mode-card listen">
+    <div class="mode-card-bg-icon">
+      <svg class="svg-icon-lg" style="width:100px;height:100px" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+    </div>
+    <div class="mode-card-top">
+      <div class="mode-card-icon">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+      </div>
+      <div class="mode-card-arrow">
+        <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="mode-card-info">
+      <h3>听读模式</h3>
+      <p>全文自动播放，调节语速跟读</p>
+    </div>
+  </div>
+
+  <div class="mode-card practice">
+    <div class="mode-card-bg-icon">
+      <svg class="svg-icon-lg" style="width:100px;height:100px" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+    </div>
+    <div class="mode-card-top">
+      <div class="mode-card-icon">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+      </div>
+      <div class="mode-card-arrow">
+        <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="mode-card-info">
+      <h3>个人练习</h3>
+      <p>脱稿背诵，语音识别逐词点亮</p>
+    </div>
+  </div>
+
+  <div class="mode-card group">
+    <div class="mode-card-bg-icon">
+      <svg class="svg-icon-lg" style="width:100px;height:100px" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="mode-card-top">
+      <div class="mode-card-icon">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="mode-card-arrow">
+        <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="mode-card-info">
+      <h3>合练模式</h3>
+      <p>三人脱稿合练，结束出报告</p>
+    </div>
+  </div>
+</div>
+
+<div class="quick-stats">
+  <div class="stat-card">
+    <div class="stat-num" style="color:#66bb6a">78%</div>
+    <div class="stat-label">上次完成度</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:#42a5f5">12<span style="font-size:14px">min</span></div>
+    <div class="stat-label">练习时长</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:#ffa726">7<span style="font-size:14px">/29</span></div>
+    <div class="stat-label">当前进度</div>
+  </div>
+</div>
+
+<!-- ========== PRACTICE ========== -->
+<div class="section-label">个人练习页</div>
+<div class="practice-container">
+  <div class="practice-top-bar">
+    <div class="top-bar-left">
+      <div class="back-circle">
+        <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      </div>
+      <div>
+        <div class="top-bar-title">个人练习</div>
+        <div class="top-bar-sub">Student B · 背诵模式</div>
+      </div>
+    </div>
+    <div class="settings-circle">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  </div>
+
+  <div class="now-playing-bar">
+    <div class="now-playing-icon">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+    </div>
+    <div class="now-playing-info">
+      <div class="np-label">正在练习</div>
+      <div class="np-text">第 7 句 · Student B</div>
+    </div>
+    <div class="np-progress"><div class="np-progress-fill"></div></div>
+  </div>
+
+  <div class="controls-bar">
+    <div class="role-pills">
+      <div class="role-pill">A</div>
+      <div class="role-pill active">B</div>
+      <div class="role-pill">C</div>
+    </div>
+    <div class="control-icon-btn on">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+    <div class="control-icon-btn">
+      <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+    </div>
+  </div>
+
+  <div class="lyrics-area">
+    <div class="lyric-line past">
+      <div class="lyric-meta">
+        <span class="lyric-role A">Student A</span>
+        <span class="lyric-num">05</span>
+      </div>
+      <div class="lyric-text">Plastic pollution is one of the most pressing environmental issues of our time.</div>
+      <div class="lyric-zh">塑料污染是当今最紧迫的环境问题之一。</div>
+    </div>
+
+    <div class="lyric-line current">
+      <div class="lyric-meta">
+        <span class="lyric-role B">Student B</span>
+        <span class="lyric-num">06</span>
+      </div>
+      <div class="lyric-text">
+        <span class="done">That is a good point.</span>
+        <span class="todo"> But do you think individuals can really make a difference?</span>
+      </div>
+      <div class="lyric-zh">说得好。但你认为个人真的能产生影响吗？</div>
+    </div>
+
+    <div class="lyric-line">
+      <div class="lyric-meta">
+        <span class="lyric-role C">Student C</span>
+        <span class="lyric-num">07</span>
+      </div>
+      <div class="lyric-text" style="color:rgba(255,255,255,0.2)">Absolutely. Every small action counts...</div>
+    </div>
+  </div>
+
+  <div class="turn-banner">
+    <div class="turn-wave">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="turn-banner-text">轮到你了 · 请朗读 Student B</div>
+  </div>
+
+  <div class="player-bar">
+    <button class="player-btn secondary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      <span class="btn-text">原音</span>
+    </button>
+    <button class="player-btn primary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <span class="btn-text">读完了</span>
+    </button>
+    <button class="player-btn secondary">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
+      <span class="btn-text">下一句</span>
+    </button>
+  </div>
+</div>
+
+</body>
+</html>
