@@ -12,15 +12,34 @@ let silentAudio = null;
 let iosSessionUnlocked = false;
 
 function unlockIOSAudioSession() {
-  if (iosSessionUnlocked) return;
   if (!silentAudio) {
     silentAudio = document.getElementById('silentAudio');
     if (!silentAudio) return;
     silentAudio.src = SILENT_AUDIO_SRC;
     silentAudio.volume = 0.0001;
   }
-  silentAudio.play().then(() => { iosSessionUnlocked = true; }).catch(() => {});
+  // Restart silent audio if it was paused by the OS (long playback / background)
+  if (silentAudio.paused) {
+    silentAudio.play().then(() => { iosSessionUnlocked = true; }).catch(() => {});
+  } else {
+    iosSessionUnlocked = true;
+  }
 }
+
+// Ensure audio context and silent audio are running (call before every playback)
+function ensureAudioRunning() {
+  unlockIOSAudioSession();
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+}
+
+// Restore audio when page becomes visible again (iOS may suspend in background)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    setTimeout(ensureAudioRunning, 100);
+  }
+});
 
 async function initAudio(audioUrl) {
   try {
@@ -51,7 +70,7 @@ function getPlaybackPosition() {
 
 function startPlayback(offset, duration) {
   stopCurrentSource();
-  unlockIOSAudioSession();
+  ensureAudioRunning();
   if (!audioReady || !audioBuffer) return;
 
   // Create AudioContext inside user gesture (iOS requirement)
@@ -59,7 +78,7 @@ function startPlayback(offset, duration) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx.resume().catch(() => {});
   }
 
   currentSource = audioCtx.createBufferSource();
