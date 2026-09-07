@@ -10,6 +10,7 @@ let practiceMode = 'read';  // 'read' or 'recite'
 let playbackRate = 1.0;
 let showTranslation = false;
 let isHintPressed = false;
+let isLooping = false;  // loop playback of current sentence
 
 // DOM elements
 const transcriptEl = document.getElementById('transcript');
@@ -234,6 +235,7 @@ function togglePlay() {
     pausedAt = getPlaybackPosition();
     stopCurrentSource();
     isPlaying = false;
+    isLooping = false;
   } else {
     if (!practiceStarted) {
       practiceStarted = true;
@@ -285,6 +287,20 @@ function updatePlayButton() {
     nextIcon.textContent = '⏭';
     nextLabel.textContent = '下一句';
   }
+  
+  // Audio button: 🔊原音 in recite mode my turn, 🔁复读/⏹停止 otherwise
+  const audioIcon = audioBtn.querySelector('.btn-icon');
+  const audioLabel = audioBtn.querySelector('span:last-child');
+  if (isMyTurn && practiceMode === 'recite') {
+    audioIcon.textContent = '🔊';
+    audioLabel.textContent = '原音';
+  } else if (isLooping) {
+    audioIcon.textContent = '⏹';
+    audioLabel.textContent = '停止';
+  } else {
+    audioIcon.textContent = '🔁';
+    audioLabel.textContent = '复读';
+  }
 }
 
 // Hint button: press and hold to show full text in recite mode
@@ -330,30 +346,52 @@ function playCurrentSentenceAudio() {
   const d = dialogues[currentIndex];
   if (!d || !audioBuffer) return;
   
-  // Pause speech recognition during audio playback (avoid recognizing the audio)
-  pauseRecognition();
+  // Recite mode + my turn: play original audio once (no loop)
+  if (isMyTurn && practiceMode === 'recite') {
+    pauseRecognition();
+    stopCurrentSource();
+    isPlaying = true;
+    isLooping = false;
+    updatePlayButton();
+    
+    const duration = d.endTime - d.startTime;
+    startPlayback(d.startTime, duration);
+    
+    setTimeout(() => {
+      isPlaying = false;
+      updatePlayButton();
+      if (isMyTurn && practiceMode === 'recite') {
+        resumeRecognitionKeepState();
+      }
+    }, duration * 1000 + 200);
+    return;
+  }
   
-  stopCurrentSource();
-  isPlaying = true;
-  updatePlayButton();
-  
-  const duration = d.endTime - d.startTime;
-  startPlayback(d.startTime, duration);
-  
-  // Restore recognition after playback finishes (keep matched words state)
-  setTimeout(() => {
+  // Other cases: toggle loop playback of current sentence
+  if (isLooping) {
+    // Stop looping
+    isLooping = false;
+    stopCurrentSource();
     isPlaying = false;
     updatePlayButton();
-    if (isMyTurn && practiceMode === 'recite') {
-      resumeRecognitionKeepState();
-    }
-  }, duration * 1000 + 200);
+  } else {
+    // Start looping
+    isLooping = true;
+    stopCurrentSource();
+    isPlaying = true;
+    updatePlayButton();
+    
+    const duration = d.endTime - d.startTime;
+    startPlayback(d.startTime, duration);
+    // Loop handled in startPlayback's onended callback
+  }
 }
 
 function goPrev() {
   if (currentIndex > 0) {
     stopCurrentSource();
     isPlaying = false;
+    isLooping = false;
     isMyTurn = false;
     hideMyTurnBanner();
     playSentence(currentIndex - 1);
@@ -362,6 +400,7 @@ function goPrev() {
 function goNext() {
   stopCurrentSource();
   isPlaying = false;
+  isLooping = false;
   isMyTurn = false;
   hideMyTurnBanner();
   if (currentIndex + 1 >= TOTAL) finishPractice();
@@ -411,6 +450,7 @@ function finishPractice() {
 function restartPractice() {
   currentIndex = 0;
   isPlaying = false;
+  isLooping = false;
   isMyTurn = false;
   practiceStarted = false;
   practiceStartTime = null;
@@ -435,6 +475,7 @@ transcriptEl.addEventListener('click', (e) => {
   stopCurrentSource();
   stopSpeechRecognition();
   isPlaying = false;
+  isLooping = false;
   isMyTurn = false;
   hideMyTurnBanner();
   currentIndex = idx;

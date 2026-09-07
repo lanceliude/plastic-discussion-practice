@@ -89,9 +89,23 @@ function startPlayback(offset, duration) {
   sourceOffset = offset;
   currentSource.onended = () => {
     if (isPlaying) {
-      isPlaying = false;
-      currentSource = null;
-      setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
+      if (isLooping) {
+        // Loop mode: replay current sentence after short pause
+        currentSource = null;
+        const d = dialogues[currentIndex];
+        if (d) {
+          setTimeout(() => {
+            if (isLooping && isPlaying) {
+              startPlayback(d.startTime, d.endTime - d.startTime);
+            }
+          }, 200);
+        }
+      } else {
+        // Normal mode: advance to next sentence
+        isPlaying = false;
+        currentSource = null;
+        setTimeout(() => { if (!isMyTurn) playSentence(currentIndex + 1); }, 150);
+      }
     }
   };
   currentSource.start(0, offset, Math.max(0.01, duration));
