@@ -393,24 +393,115 @@ function speakWord(word) {
   window.speechSynthesis.speak(utterance);
 }
 
-// Translate a word using Google Translate free endpoint
+// Local fallback dictionary for common words in this script
+const LOCAL_DICT = {
+  'plastic': '塑料', 'pollution': '污染', 'discussion': '讨论', 'morning': '早上',
+  'everyone': '大家', 'thank': '感谢', 'joining': '参加', 'today': '今天',
+  'talk': '谈论', 'about': '关于', 'first': '首先', 'discuss': '讨论',
+  'main': '主要的', 'sources': '来源', 'impacts': '影响', 'ecosystem': '生态系统',
+  'human': '人类的', 'health': '健康', 'then': '然后', 'look': '看',
+  'individuals': '个人', 'technology': '技术', 'policies': '政策', 'help': '帮助',
+  'reduce': '减少', 'begin': '开始', 'who': '谁', 'would': '愿意',
+  'like': '喜欢/像', 'start': '开始', 'research': '研究', 'read': '读',
+  'packaging': '包装', 'major': '主要的', 'source': '来源', 'many': '许多',
+  'bottles': '瓶子', 'bags': '袋子', 'food': '食物', 'containers': '容器',
+  'used': '使用过的', 'only': '只', 'once': '一次', 'thrown': '扔',
+  'away': '离开', 'waste': '垃圾/浪费', 'remain': '保持/剩余', 'years': '年',
+  'good': '好的', 'point': '观点', 'think': '认为', 'people': '人们',
+  'mainly': '主要地', 'responsible': '有责任的', 'companies': '公司',
+  'also': '也', 'producing': '生产', 'too': '太', 'much': '多',
+  'both': '两者都', 'choose': '选择', 'products': '产品', 'less': '更少',
+  'decisions': '决定', 'how': '如何', 'packaged': '包装的', 'another': '另一个',
+  'issue': '问题', 'consider': '考虑', 'poor': '差的', 'management': '管理',
+  'shows': '显示', 'million': '百万', 'tonnes': '吨', 'leaked': '泄漏',
+  'environment': '环境', 'because': '因为', 'collected': '收集', 'managed': '管理',
+  'well': '好', 'agree': '同意', 'focus': '关注', 'large': '大的',
+  'items': '物品', 'microplastics': '微塑料', 'tyre': '轮胎', 'wear': '磨损',
+  'brake': '刹车', 'washing': '洗', 'synthetic': '合成的', 'clothes': '衣服',
+  'release': '释放', 'tiny': '微小的', 'particles': '颗粒', 'visible': '可见的',
+  'harder': '更难', 'notice': '注意', 'important': '重要的', 'different': '不同的',
+  'enter': '进入', 'happen': '发生', 'gets': '得到', 'ecological': '生态的',
+  'harm': '伤害', 'marine': '海洋的', 'animals': '动物', 'mistake': '误认为',
+  'food': '食物', 'trapped': '困住', 'fishing': '捕鱼', 'nets': '网',
+  'stop': '停止', 'feeding': '进食', 'moving': '移动', 'escaping': '逃离',
+  'danger': '危险', 'exactly': '确切地', 'impact': '影响', 'limited': '有限的',
+  'soil': '土壤', 'groundwater': '地下水', 'rivers': '河流', 'oceans': '海洋',
+  'breaks': '分解', 'small': '小的', 'pieces': '碎片', 'chains': '链',
+  'therefore': '因此', 'affect': '影响', 'balance': '平衡', 'whole': '整个的',
+  'ecosystems': '生态系统', 'true': '真的', 'besides': '此外', 'contributes': '贡献',
+  'climate': '气候', 'change': '变化', 'lifecycles': '生命周期', 'produce': '生产',
+  'great': '大量的', 'deal': '量', 'greenhouse': '温室', 'gas': '气体',
+  'emissions': '排放', 'both': '两者都', 'problem': '问题', 'yes': '是的',
+  'however': '然而', 'may': '可能', 'affect': '影响', 'especially': '尤其',
+  'example': '例子', 'take': '摄入', 'through': '通过', 'drinking': '喝',
+  'water': '水', 'worrying': '令人担忧的', 'bodies': '身体', 'ways': '方式',
+  'breathe': '呼吸', 'fibres': '纤维', 'air': '空气', 'household': '家庭的',
+  'materials': '材料', 'addition': '此外', 'contain': '包含', 'harmful': '有害的',
+  'chemicals': '化学物质', 'leading': '导致', 'various': '各种', 'diseases': '疾病',
+  'means': '意味着', 'environmental': '环境的', 'serious': '严重的', 'concern': '关切',
+  'next': '下一个', 'question': '问题', 'what': '什么', 'can': '能',
+  'do': '做', 'one': '一个', 'thing': '事情', 'refusing': '拒绝',
+  'unnecessary': '不必要的', 'single': '单一的', 'use': '使用', 'items': '物品',
+  'bring': '带', 'reusable': '可重复使用的', 'shopping': '购物', 'coffee': '咖啡',
+  'cups': '杯子', 'actions': '行动', 'seem': '似乎', 'often': '经常',
+  'work': '工作', 'remember': '记得', 'buy': '买', 'loose': '散装的',
+  'fruit': '水果', 'vegetables': '蔬菜', 'refill': '续装', 'options': '选项',
+  'realistic': '现实的', 'everyone': '每个人', 'equally': '平等地', 'easy': '容易',
+  'shops': '商店', 'available': '可用的', 'every': '每个', 'area': '地区',
+  'still': '仍然', 'changes': '改变', 'such': '比如', 'reusing': '重复使用',
+  'following': '遵循', 'local': '当地的', 'recycling': '回收', 'rules': '规则',
+  'individual': '个人的', 'actions': '行动', 'helpful': '有帮助的', 'solve': '解决',
+  'alone': '独自', 'need': '需要', 'other': '其他的', 'solutions': '解决方案',
+  'innovation': '创新', 'better': '更好的', 'automated': '自动化的', 'systems': '系统',
+  'identify': '识别', 'sort': '分类', 'accurately': '准确地', 'improve': '改善',
+  'quality': '质量', 'recycled': '回收的', 'useful': '有用的', 'types': '类型',
+  'cannot': '不能', 'always': '总是', 'together': '一起', 'microfibre': '微纤维',
+  'filters': '过滤器', 'machines': '机器', 'capture': '捕获', 'before': '之前',
+  'wastewater': '废水', 'waterways': '水道', 'prevention': '预防', 'trying': '尝试',
+  'remove': '移除', 'reaches': '到达', 'ocean': '海洋', 'companies': '公司',
+  'design': '设计', 'easier': '更容易', 'fewer': '更少', 'mixed': '混合的',
+  'materials': '材料', 'technologies': '技术', 'support': '支持', 'clear': '清晰的',
+  'rules': '规则', 'therefore': '因此', 'governments': '政府', 'important': '重要的',
+  'role': '角色', 'zealand': '新西兰', 'phased': '逐步', 'out': '淘汰',
+  'hard': '难的', 'produce': '生产', 'including': '包括', 'plates': '盘子',
+  'bowls': '碗', 'cutlery': '餐具', 'bans': '禁令', 'unnecessary': '不必要的',
+  'suitable': '合适的', 'alternatives': '替代品', 'create': '创造', 'difficulties': '困难',
+  'small': '小的', 'businesses': '企业', 'time': '时间', 'money': '钱',
+  'find': '找到', 'new': '新的', 'possible': '可能的', 'give': '给',
+  'enough': '足够的', 'prepare': '准备', 'require': '要求', 'clearer': '更清晰的',
+  'labels': '标签', 'approach': '方法', 'tax': '税', 'encourage': '鼓励',
+  'deposit': '押金', 'return': '归还', 'scheme': '计划', 'drink': '喝',
+  'could': '能', 'mention': '提到', 'international': '国际的', 'cooperation': '合作',
+  'crosses': '跨越', 'national': '国家的', 'borders': '边界', 'share': '分享',
+  'improve': '改善', 'lower': '更低的', 'income': '收入', 'countries': '国家',
+  'without': '没有', 'still': '仍然', 'affect': '影响', 'another': '另一个',
+  'country': '国家', 'summarise': '总结', 'harmful': '有害的', 'single': '单一的',
+  'action': '行动', 'correctly': '正确地', 'totally': '完全地', 'agree': '同意',
+  'insightful': '有见地的', 'thanks': '谢谢', 'see': '看见', 'next': '下一个'
+};
+
+// Translate a word using MyMemory API (CORS-enabled, free, no API key)
 async function translateWord(word) {
   const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
   if (!cleanWord) return '';
   
-  // Check cache first
+  // Check local dictionary first
+  if (LOCAL_DICT[cleanWord]) return LOCAL_DICT[cleanWord];
+  
+  // Check cache
   const cache = getTranslationCache();
   if (cache[cleanWord]) return cache[cleanWord];
   
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${encodeURIComponent(cleanWord)}`;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanWord)}&langpair=en|zh-CN`;
     const response = await fetch(url);
     const data = await response.json();
-    const translation = data && data[0] && data[0][0] && data[0][0][0] ? data[0][0][0] : '';
-    if (translation) {
+    const translation = data && data.responseData && data.responseData.translatedText ? data.responseData.translatedText : '';
+    if (translation && translation !== cleanWord) {
       setTranslationCache(cleanWord, translation);
+      return translation;
     }
-    return translation || '翻译不可用';
+    return '翻译不可用';
   } catch(e) {
     console.warn('Translation failed:', e);
     return '翻译不可用';
